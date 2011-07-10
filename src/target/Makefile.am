@@ -31,10 +31,11 @@ libtarget_la_SOURCES = \
 	$(ARM_MISC_SRC) \
 	$(AVR32_SRC) \
 	$(MIPS32_SRC) \
+	$(OR1K_SRC) \
 	avrt.c \
 	dsp563xx.c \
 	dsp563xx_once.c
-	
+
 # This file generates warnings, disabled for now, see also target.c
 #	dsp5680xx.c
 
@@ -86,7 +87,7 @@ ARM_DEBUG_SRC = \
 	arm_simulator.c \
 	arm_semihosting.c \
 	arm_adi_v5.c \
- 	adi_v5_jtag.c \
+	adi_v5_jtag.c \
 	adi_v5_swd.c \
 	embeddedice.c \
 	trace.c \
@@ -108,6 +109,9 @@ MIPS32_SRC = \
 	mips32_dmaacc.c \
 	mips_ejtag.c
 
+OR1K_SRC = \
+	or1k.c \
+	or1k_jtag.c
 
 noinst_HEADERS = \
 	algorithm.h \
@@ -163,7 +167,9 @@ noinst_HEADERS = \
 	avr32_ap7k.h \
 	avr32_jtag.h \
 	avr32_mem.h \
-	avr32_regs.h
+	avr32_regs.h \
+	or1k.h \
+	or1k_jtag.h
 
 nobase_dist_pkglib_DATA =
 nobase_dist_pkglib_DATA += ecos/at91eb40a.elf
