@@ -176,6 +176,7 @@ static int jtagkey_init(void);
 static int lm3s811_jtag_init(void);
 static int icdi_jtag_init(void);
 static int olimex_jtag_init(void);
+static int orsoc_jtag_init(void);
 static int flyswatter_init(void);
 static int minimodule_init(void);
 static int turtle_init(void);
@@ -197,6 +198,7 @@ static int xds100v2_init(void);
 static void ftx23_reset(int trst, int srst);
 static void jtagkey_reset(int trst, int srst);
 static void olimex_jtag_reset(int trst, int srst);
+static void orsoc_jtag_reset(int trst, int srst);
 static void flyswatter_reset(int trst, int srst);
 static void minimodule_reset(int trst, int srst);
 static void turtle_reset(int trst, int srst);
@@ -212,6 +214,7 @@ static void xds100v2_reset(int trst, int srst);
 
 /* blink procedures for layouts that support a blinking led */
 static void olimex_jtag_blink(void);
+static void orsoc_jtag_blink(void);
 static void flyswatter_jtag_blink(void);
 static void turtle_jtag_blink(void);
 static void signalyzer_h_blink(void);
@@ -257,6 +260,11 @@ static const struct ft2232_layout  ft2232_layouts[] =
 		.init = olimex_jtag_init,
 		.reset = olimex_jtag_reset,
 		.blink = olimex_jtag_blink
+	},
+	{ .name = "orsoc-jtag",
+		.init = orsoc_jtag_init,
+		.reset = orsoc_jtag_reset,
+		.blink = orsoc_jtag_blink
 	},
 	{ .name = "flyswatter",
 		.init = flyswatter_init,
@@ -1514,6 +1522,20 @@ static void olimex_jtag_reset(int trst, int srst)
 	LOG_DEBUG("trst: %i, srst: %i, high_output: 0x%2.2x, high_direction: 0x%2.2x", trst, srst, high_output,
 			high_direction);
 }
+
+static void orsoc_jtag_reset(int trst, int srst)
+{
+
+        /* Actually no RST lines from this debugger to target */
+
+	/* command "set data bits high byte" */
+	buffer_write(0x82);
+	buffer_write(high_output);
+	buffer_write(high_direction);
+	LOG_DEBUG("trst: %i, srst: %i, high_output: 0x%2.2x, high_direction: 0x%2.2x", trst, srst, high_output,
+			high_direction);
+}
+
 
 static void axm0432_jtag_reset(int trst, int srst)
 {
@@ -2903,6 +2925,37 @@ static int olimex_jtag_init(void)
 	return ERROR_OK;
 }
 
+static int orsoc_jtag_init(void)
+{
+	low_output    = 0x08;
+	low_direction = 0x1b;
+
+	/* initialize low byte for jtag */
+	if (ft2232_set_data_bits_low_byte(low_output,low_direction) != ERROR_OK)
+	{
+		LOG_ERROR("couldn't initialize FT2232 with 'ORSoC' layout");
+		return ERROR_JTAG_INIT_FAILED;
+	}
+	
+	/* No RST connections from this JTAG cable */
+	nTRST    = 0x00;
+	nTRSTnOE = 0x0;
+	nSRST    = 0x00;
+	nSRSTnOE = 0x00;
+
+	/* turn red LED on */
+	high_output |= 0x08;
+
+	/* initialize high byte for jtag */
+	if (ft2232_set_data_bits_high_byte(high_output,high_direction) != ERROR_OK)
+	{
+		LOG_ERROR("couldn't initialize FT2232 with 'ORSoC' layout");
+		return ERROR_JTAG_INIT_FAILED;
+	}
+
+	return ERROR_OK;
+}
+
 static int flyswatter_init(void)
 {
 	low_output    = 0x18;
@@ -3209,6 +3262,18 @@ static int xds100v2_init(void)
 static void olimex_jtag_blink(void)
 {
 	/* Olimex ARM-USB-OCD has a LED connected to ACBUS3
+	 * ACBUS3 is bit 3 of the GPIOH port
+	 */
+	high_output ^= 0x08;
+
+	buffer_write(0x82);
+	buffer_write(high_output);
+	buffer_write(high_direction);
+}
+
+static void orsoc_jtag_blink(void)
+{
+	/* ORSoC USB-JTAG debug cable has a LED connected to ACBUS3
 	 * ACBUS3 is bit 3 of the GPIOH port
 	 */
 	high_output ^= 0x08;
