@@ -18,12 +18,15 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include "target.h"
 #include "helper/types.h"
 #include "jtag/jtag.h"
 #include "or1k_jtag.h"
-
+#include "or1k.h"
 
 /* Currently hard set in functions to 32-bits */
 int or1k_jtag_read_cpu(struct or1k_jtag *jtag_info,
@@ -98,11 +101,11 @@ int or1k_jtag_write_memory8(struct or1k_jtag *jtag_info,
 
 int or1k_jtag_read_regs(struct or1k_jtag *jtag_info, uint32_t *regs)
 {
-	int i, retval;
+	int i;
 
 	/* read core registers */
 	for (i = 0; i < OR1KNUMCOREREGS - 1; i++) 
-		or1k_jtag_read_reg(jtag_info, i, regs + i);
+		or1k_jtag_read_cpu(jtag_info, i, regs + i);
 
 	/* read status register */
 	/*
@@ -120,7 +123,7 @@ int or1k_jtag_read_regs(struct or1k_jtag *jtag_info, uint32_t *regs)
 
 int or1k_jtag_write_regs(struct or1k_jtag *jtag_info, uint32_t *regs)
 {
-	int i, retval;
+	int i;
 	
 	/*
 	retval = or1k_jtag_write_reg(jtag_info, 0, regs[OR1K_REG_SR]);
@@ -135,7 +138,7 @@ int or1k_jtag_write_regs(struct or1k_jtag *jtag_info, uint32_t *regs)
 	 * And now the rest of registers
 	 */
 	for (i = 0; i < OR1KNUMCOREREGS - 1; i++) 
-		or1k_jtag_write_reg(jtag_info, i, regs[i]);
+		or1k_jtag_write_cpu(jtag_info, i, regs[i]);
 
 	return ERROR_OK;
 }
