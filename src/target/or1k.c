@@ -28,6 +28,8 @@
 #include "breakpoints.h"
 #include "target_type.h"
 #include "or1k_jtag.h"
+#include "or1k.h"
+
 
 
 static char* or1k_core_reg_list[] =
@@ -123,7 +125,7 @@ int or1k_restore_context(struct target *target)
 	return ERROR_OK;
 }
 
-static int avr32_read_core_reg(struct target *target, int num)
+static int or1k_read_core_reg(struct target *target, int num)
 {
 	uint32_t reg_value;
 
@@ -239,11 +241,7 @@ static struct reg_cache *or1k_build_reg_cache(struct target *target)
 static int or1k_debug_entry(struct target *target)
 {
 
-	uint32_t dpc, dinst;
-	int retval;
-	struct or1k_common *or1k = target_to_or1k(target);
-
-	/* Perhaps do more debugging entry (processor stalled) set up here */
+  	/* Perhaps do more debugging entry (processor stalled) set up here */
 
 	or1k_save_context(target);
 
@@ -424,7 +422,7 @@ static int or1k_resume(struct target *target, int current,
 	*/
 	
 	/* Mohor debug if, clearing control register unstalls */
-	retval = or1k_jtag_write_cpu_cr(&or1k->jtag, 0)
+	retval = or1k_jtag_write_cpu_cr(&or1k->jtag, 0);
 	if (retval != ERROR_OK)
 		return retval;
 
@@ -492,7 +490,7 @@ static int or1k_remove_watchpoint(struct target *target,
 static int or1k_read_memory(struct target *target, uint32_t address,
 		uint32_t size, uint32_t count, uint8_t *buffer)
 {
-	struct or1k_common *ap7k = target_to_or1k(target);
+	struct or1k_common *or1k = target_to_or1k(target);
 
 	LOG_DEBUG("address: 0x%8.8" PRIx32 ", size: 0x%8.8" PRIx32 ", count: 0x%8.8" PRIx32 "", address, size, count);
 
@@ -530,7 +528,7 @@ static int or1k_read_memory(struct target *target, uint32_t address,
 static int or1k_write_memory(struct target *target, uint32_t address,
 		uint32_t size, uint32_t count, const uint8_t *buffer)
 {
-	struct or1k_common *ap7k = target_to_or1k(target);
+	struct or1k_common *or1k = target_to_or1k(target);
 
 	LOG_DEBUG("address: 0x%8.8" PRIx32 ", size: 0x%8.8" PRIx32 ", count: 0x%8.8" PRIx32 "", address, size, count);
 
@@ -568,7 +566,7 @@ static int or1k_write_memory(struct target *target, uint32_t address,
 static int or1k_init_target(struct command_context *cmd_ctx,
 		struct target *target)
 {
-	struct or1k_common *ap7k = target_to_or1k(target);
+	struct or1k_common *or1k = target_to_or1k(target);
 
 	or1k->jtag.tap = target->tap;
 	or1k_build_reg_cache(target);
@@ -630,8 +628,9 @@ static int or1k_bulk_write_memory(struct target *target, uint32_t address,
 
 int or1k_arch_state(struct target *target)
 {
+  /*
 	struct or1k_common *or1k = target_to_or1k(target);
-
+  */
 	/*
 	LOG_USER("target halted due to %s, pc: 0x%8.8" PRIx32 "",
                 debug_reason_name(target), ap7k->jtag.dpc);
