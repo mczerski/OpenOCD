@@ -63,10 +63,18 @@
 
 #define OR1K_CPU_STALLED 0x1
 
+/* Module select response status codes */
+#define OR1K_MOHORDBGIF_MODULE_SELECT_OK 0x0
+#define OR1K_MOHORDBGIF_MODULE_SELECT_CRC_ERROR 0x1
+#define OR1K_MOHORDBGIF_MODULE_SELECT_MODULE_NOT_EXIST 0x2
+
+
 struct or1k_jtag
 {
 	struct jtag_tap *tap;
 };
+
+int or1k_jtag_init(struct or1k_jtag *jtag_info);
 
 /* Currently hard set in functions to 32-bits */
 int or1k_jtag_read_cpu(struct or1k_jtag *jtag_info,

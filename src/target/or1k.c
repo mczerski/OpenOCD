@@ -569,6 +569,7 @@ static int or1k_init_target(struct command_context *cmd_ctx,
 	struct or1k_common *or1k = target_to_or1k(target);
 
 	or1k->jtag.tap = target->tap;
+	
 	or1k_build_reg_cache(target);
 	return ERROR_OK;
 }
