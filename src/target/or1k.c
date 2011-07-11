@@ -263,7 +263,7 @@ static int or1k_poll(struct target *target)
 		return retval;
 
 	/* check for processor halted */
-	if (cpu_cr)
+	if (cpu_cr & OR1K_MOHORDBGIF_CPU_CR_STALL)
 	{
 		if ((target->state == TARGET_RUNNING) || 
 		    (target->state == TARGET_RESET))
@@ -331,7 +331,7 @@ static int or1k_halt(struct target *target)
 	}
 
 	/* Mohor debug unit-specific. */
-	or1k_jtag_write_cpu_cr(&or1k->jtag, OR1K_MOHORDBGIF_CPU_CR_STALL);
+	or1k_jtag_write_cpu_cr(&or1k->jtag, 1, 0);
 
 	target->debug_reason = DBG_REASON_DBGRQ;
 
@@ -422,7 +422,7 @@ static int or1k_resume(struct target *target, int current,
 	*/
 	
 	/* Mohor debug if, clearing control register unstalls */
-	retval = or1k_jtag_write_cpu_cr(&or1k->jtag, 0);
+	retval = or1k_jtag_write_cpu_cr(&or1k->jtag, 0, 0);
 	if (retval != ERROR_OK)
 		return retval;
 
@@ -605,8 +605,8 @@ static int or1k_examine(struct target *target)
 		/* Possible specific to Mohor debug interface - others may 
 		 * have to do something different here. 
 		 */
-		or1k_jtag_read_cpu_cr(&or1k->jtag, &cpu_cr);
-		if (cpu_cr) 
+ 		or1k_jtag_read_cpu_cr(&or1k->jtag, &cpu_cr);
+		if (cpu_cr & OR1K_MOHORDBGIF_CPU_CR_STALL) 
 		{
 			LOG_INFO("target is halted");
 			target->state = TARGET_HALTED;

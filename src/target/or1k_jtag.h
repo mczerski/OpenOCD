@@ -58,8 +58,8 @@
 #define OR1K_MOHORDBGIF_CPU_MODULE_CMD_CTRL_WRITE 0x4
 
 /* CPU module control register bits */
-#define OR1K_MOHORDBGIF_CPU_CR_RESET 0 /*51*/
-#define OR1K_MOHORDBGIF_CPU_CR_STALL 1 /*50*/
+#define OR1K_MOHORDBGIF_CPU_CR_RESET 1
+#define OR1K_MOHORDBGIF_CPU_CR_STALL 2
 
 #define OR1K_CPU_STALLED 0x1
 
@@ -67,6 +67,11 @@
 #define OR1K_MOHORDBGIF_MODULE_SELECT_OK 0x0
 #define OR1K_MOHORDBGIF_MODULE_SELECT_CRC_ERROR 0x1
 #define OR1K_MOHORDBGIF_MODULE_SELECT_MODULE_NOT_EXIST 0x2
+
+/* Command status codes */
+#define OR1K_MOHORDBGIF_CMD_OK 0x0
+#define OR1K_MOHORDBGIF_CMD_CRC_ERROR 0x1
+
 
 
 struct or1k_jtag
@@ -86,7 +91,7 @@ int or1k_jtag_read_cpu_cr(struct or1k_jtag *jtag_info,
 		uint32_t *value);
 
 int or1k_jtag_write_cpu_cr(struct or1k_jtag *jtag_info,
-		uint32_t value);
+			   uint32_t stall, uint32_t reset);
 
 
 int or1k_jtag_read_memory32(struct or1k_jtag *jtag_info, 
