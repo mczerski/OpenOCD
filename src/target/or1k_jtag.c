@@ -35,539 +35,1054 @@ static int or1k_jtag_module_selected = -1;
 int or1k_jtag_init(struct or1k_jtag *jtag_info)
 {
 
-  LOG_DEBUG("%s: Initialising OpenCores JTAG TAP for Mohor Debug Interface",
-	    __func__);
+	LOG_DEBUG(" Initialising OpenCores JTAG TAP for Mohor Debug Interface"
+		  );
 
-  /* Put TAP into state where it can talk to the debug interface
-     by shifting in correct value to IR */
-  struct jtag_tap *tap;
+	/* Put TAP into state where it can talk to the debug interface
+	   by shifting in correct value to IR */
+	struct jtag_tap *tap;
 
-  tap = jtag_info->tap;
-  if (tap == NULL)
-    return ERROR_FAIL;
+	tap = jtag_info->tap;
+	if (tap == NULL)
+		return ERROR_FAIL;
 
-  /* tap->ir_length should be set to 4 already, or we can hard code it */
-  if (buf_get_u32(tap->cur_instr, 0, tap->ir_length) != 
-      (uint32_t)OR1K_TAP_INST_DEBUG) /* OpenCores Mohor JTAG TAP-specific */
-    {
-      struct scan_field field;
-      uint8_t t[4];
-      uint8_t ret[4];
-      
-      field.num_bits = tap->ir_length;
-      field.out_value = t;
-      /* OpenCores Mohor JTAG TAP-specific */
-      buf_set_u32(t, 0, field.num_bits, OR1K_TAP_INST_DEBUG);
-      field.in_value = ret;
-
-      /* Ensure TAP is reset - maybe not necessary*/
-      jtag_add_tlr();
-      
-      jtag_add_ir_scan(tap, &field, TAP_IDLE);
-      if (jtag_execute_queue() != ERROR_OK)
+	/* tap->ir_length should be set to 4 already, or we can hard code it */
+	if (buf_get_u32(tap->cur_instr, 0, tap->ir_length) != 
+	    (uint32_t)OR1K_TAP_INST_DEBUG) /* OpenCores Mohor JTAG TAP-specific */
 	{
-	  LOG_ERROR("%s: setting TAP's IR to DEBUG failed", __func__);
-	  return ERROR_FAIL;
+		struct scan_field field;
+		uint8_t t[4];
+		uint8_t ret[4];
+      
+		field.num_bits = tap->ir_length;
+		field.out_value = t;
+		/* OpenCores Mohor JTAG TAP-specific */
+		buf_set_u32(t, 0, field.num_bits, OR1K_TAP_INST_DEBUG);
+		field.in_value = ret;
+
+		/* Ensure TAP is reset - maybe not necessary*/
+		jtag_add_tlr();
+      
+		jtag_add_ir_scan(tap, &field, TAP_IDLE);
+		if (jtag_execute_queue() != ERROR_OK)
+		{
+			LOG_ERROR(" setting TAP's IR to DEBUG failed");
+			return ERROR_FAIL;
+		}
 	}
-    }
 
-  /* Tap should now be configured to communicate with debug interface */
-  or1k_jtag_inited = 1;
+	/* Tap should now be configured to communicate with debug interface */
+	or1k_jtag_inited = 1;
 
-  return ERROR_OK;
+	return ERROR_OK;
 
 }
 
 static uint32_t or1k_jtag_mohor_debug_crc_calc(uint32_t crc, 
 					       uint32_t input_bit) 
 {
-  uint32_t d = (input_bit) ? 0xfffffff : 0x0000000;
-  uint32_t crc_32 = ((crc >> 31)&1) ? 0xfffffff : 0x0000000;
-  crc <<= 1;
+	uint32_t d = (input_bit) ? 0xfffffff : 0x0000000;
+	uint32_t crc_32 = ((crc >> 31)&1) ? 0xfffffff : 0x0000000;
+	crc <<= 1;
 #define OR1K_JTAG_MOHOR_DBG_CRC_POLY      0x04c11db7
-  return crc ^ ((d ^ crc_32) & OR1K_JTAG_MOHOR_DBG_CRC_POLY);
+	return crc ^ ((d ^ crc_32) & OR1K_JTAG_MOHOR_DBG_CRC_POLY);
 }
 
 
 int or1k_jtag_mohor_debug_select_module(struct or1k_jtag *jtag_info, 
 					uint32_t module)
 {
-  int i;
-  uint32_t out_module_select_bit, out_module,
-    out_crc, in_crc, expected_in_crc, in_status;
+	int i;
+	uint32_t out_module_select_bit, out_module,
+		out_crc, in_crc, expected_in_crc, in_status;
 
-  struct jtag_tap *tap;
+	struct jtag_tap *tap;
   
-  tap = jtag_info->tap;
-  if (tap == NULL)
-    return ERROR_FAIL;   
+	tap = jtag_info->tap;
+	if (tap == NULL)
+		return ERROR_FAIL;   
 
-  if (module > 15)
-    {
-      LOG_ERROR("%s: setting debug interface module failed (%d)", __func__, 
-		module);
-      return ERROR_FAIL;
-    }
+	if (module > 15)
+	{
+		LOG_ERROR(" setting debug interface module failed (%d)" 
+			  , module);
+		return ERROR_FAIL;
+	}
 
 
-  /*
-   * CPU control register write
-   * Send:
-   * {1,4'moduleID,32'CRC,36'x           }
-   * Receive:
-   * {37'x               ,4'status,32'CRC}
-   */  
-  struct scan_field fields[5];
+	/*
+	 * CPU control register write
+	 * Send:
+	 * {1,4'moduleID,32'CRC,36'x           }
+	 * Receive:
+	 * {37'x               ,4'status,32'CRC}
+	 */  
+	struct scan_field fields[5];
   
-  /* 1st bit is module select, set to '1' */
-  out_module_select_bit = 1;
+	/* 1st bit is module select, set to '1' */
+	out_module_select_bit = 1;
 
-  fields[0].num_bits = 1;
-  fields[0].out_value = (uint8_t*) &out_module_select_bit;
-  fields[0].in_value = NULL;
+	fields[0].num_bits = 1;
+	fields[0].out_value = (uint8_t*) &out_module_select_bit;
+	fields[0].in_value = NULL;
 
-  /* Module number */
-  out_module = flip_u32(module,4);
-  fields[1].num_bits = 4;
-  fields[1].out_value = (uint8_t*) &out_module;
-  fields[1].in_value = NULL;
+	/* Module number */
+	out_module = flip_u32(module,4);
+	fields[1].num_bits = 4;
+	fields[1].out_value = (uint8_t*) &out_module;
+	fields[1].in_value = NULL;
 
-  /* CRC calculations */
-  out_crc = 0xffffffff;
-  out_crc = or1k_jtag_mohor_debug_crc_calc(out_crc, out_module_select_bit);
-  for(i=0;i<4;i++)
-    out_crc = or1k_jtag_mohor_debug_crc_calc(out_crc, ((out_module>>i)&0x1));
-  out_crc = flip_u32(out_crc,32);
+	/* CRC calculations */
+	out_crc = 0xffffffff;
+	out_crc = or1k_jtag_mohor_debug_crc_calc(out_crc, 
+						 out_module_select_bit);
+	for(i=0;i<4;i++)
+		out_crc = or1k_jtag_mohor_debug_crc_calc(out_crc, 
+							 ((out_module>>i)&0x1));
+	out_crc = flip_u32(out_crc,32);
 
-  /* CRC going out */
-  fields[2].num_bits = 32;
-  fields[2].out_value = (uint8_t*) &out_crc;
-  fields[2].in_value = NULL;
+	/* CRC going out */
+	fields[2].num_bits = 32;
+	fields[2].out_value = (uint8_t*) &out_crc;
+	fields[2].in_value = NULL;
 
-  /* Status coming in */
-  fields[3].num_bits = 4;
-  fields[3].out_value = NULL;
-  fields[3].in_value = (uint8_t*) &in_status;
+	/* Status coming in */
+	fields[3].num_bits = 4;
+	fields[3].out_value = NULL;
+	fields[3].in_value = (uint8_t*) &in_status;
 
-  /* CRC coming in */
-  fields[4].num_bits = 32;
-  fields[4].out_value = NULL;
-  fields[4].in_value = (uint8_t*) &in_crc;
+	/* CRC coming in */
+	fields[4].num_bits = 32;
+	fields[4].out_value = NULL;
+	fields[4].in_value = (uint8_t*) &in_crc;
   
-  LOG_DEBUG("%s: setting mohor debug IF module: %d",__func__, module);
+	LOG_DEBUG(" setting mohor debug IF module: %d", module);
 
-  jtag_add_dr_scan(tap, 5, fields, TAP_IDLE);
+	jtag_add_dr_scan(tap, 5, fields, TAP_IDLE);
 
-  if (jtag_execute_queue() != ERROR_OK)
-    {
-      LOG_ERROR("%s: performing module change failed", __func__);
-      return ERROR_FAIL;
-    }
+	if (jtag_execute_queue() != ERROR_OK)
+	{
+		LOG_ERROR(" performing module change failed" );
+		return ERROR_FAIL;
+	}
 
-  /* Calculate expected CRC for status */
-  expected_in_crc = 0xffffffff;
-  for(i=0;i<4;i++)
-    expected_in_crc = or1k_jtag_mohor_debug_crc_calc(expected_in_crc, 
-						     ((in_status>>i)&0x1));
-  /* Check CRCs now */
-  /* Bit reverse received CRC */
-  expected_in_crc = flip_u32(expected_in_crc,32);
+	/* Calculate expected CRC for status */
+	expected_in_crc = 0xffffffff;
+	for(i=0;i<4;i++)
+		expected_in_crc = or1k_jtag_mohor_debug_crc_calc(expected_in_crc,
+								 ((in_status>>i)&
+								  0x1));
+	/* Check CRCs now */
+	/* Bit reverse received CRC */
+	expected_in_crc = flip_u32(expected_in_crc,32);
 
-  if (in_crc != expected_in_crc)
-    {
-      LOG_ERROR("%s: received CRC (0x%08x) not same as calculated CRC (0x%08x)",
-		__func__, in_crc, expected_in_crc);
-      return ERROR_FAIL;
-    }
+	if (in_crc != expected_in_crc)
+	{
+		LOG_ERROR(" received CRC (0x%08x) not same as calculated CRC (0x%08x)"
+			  , in_crc, expected_in_crc);
+		return ERROR_FAIL;
+	}
   
-  if (in_status & OR1K_MOHORDBGIF_MODULE_SELECT_CRC_ERROR)
-    {
-      LOG_ERROR("%s: debug IF module select status: CRC error",__func__);
-      return ERROR_FAIL;
-    }
-  else if (in_status & OR1K_MOHORDBGIF_MODULE_SELECT_MODULE_NOT_EXIST)
-    {
-      LOG_ERROR("%s: debug IF module select status: Invalid module (%d)",
-		__func__, module);
-      return ERROR_FAIL;
-    }
-  else if ((in_status & 0xf) == OR1K_MOHORDBGIF_MODULE_SELECT_OK)
-    {
-      LOG_DEBUG("%s: setting mohor debug IF OK",__func__);
-      or1k_jtag_module_selected = module;
-    }
-  else
-    {
-      LOG_ERROR("%s: debug IF module select status: Unknown status (%x)",
-		__func__, in_status & 0xf);
-      return ERROR_FAIL;
-    }
+	if (in_status & OR1K_MOHORDBGIF_MODULE_SELECT_CRC_ERROR)
+	{
+		LOG_ERROR(" debug IF module select status: CRC error"
+			  );
+		return ERROR_FAIL;
+	}
+	else if (in_status & OR1K_MOHORDBGIF_MODULE_SELECT_MODULE_NOT_EXIST)
+	{
+		LOG_ERROR(" debug IF module select status: Invalid module (%d)"
+			  , module);
+		return ERROR_FAIL;
+	}
+	else if ((in_status & 0xf) == OR1K_MOHORDBGIF_MODULE_SELECT_OK)
+	{
+		LOG_DEBUG(" setting mohor debug IF OK");
+		or1k_jtag_module_selected = module;
+	}
+	else
+	{
+		LOG_ERROR(" debug IF module select status: Unknown status (%x)"
+			  , in_status & 0xf);
+		return ERROR_FAIL;
+	}
 
 
-  return ERROR_OK;
+	return ERROR_OK;
 
 }
+
+int or1k_jtag_mohor_debug_set_command(struct or1k_jtag *jtag_info, 
+				       uint32_t out_accesstype,
+				       uint32_t out_address,
+				       uint32_t out_length_bytes)
+{
+	LOG_DEBUG("Setting mohor debug command. TYPE:0x%01x ADR:0x%08x LEN:%d",
+		  out_accesstype, out_address, out_length_bytes);
+
+	
+	struct jtag_tap *tap;
+  
+	tap = jtag_info->tap;
+	if (tap == NULL)
+		return ERROR_FAIL;   
+
+	/*
+	 * Command register write
+	 * Send:
+	 * {1'0, 4'writecmd,4'type,32'address,16'len,32'crc,36'x
+	 * Receive:
+	 * {89'x                                           ,4'status, 32'CRC}
+	 */
+	struct scan_field fields[8];
+	uint32_t out_module_select_bit, out_cmd, out_crc;
+	uint32_t in_status, in_crc, expected_in_crc;
+	int i;
+  
+	/* 1st bit is module select, set to '0', we're not selecting a module */
+	out_module_select_bit = 0;
+
+	fields[0].num_bits = 1;
+	fields[0].out_value = (uint8_t*) &out_module_select_bit;
+	fields[0].in_value = NULL;
+
+	/* Instruction: write command register, 4-bits */
+	out_cmd = flip_u32(OR1K_MOHORDBGIF_CPU_MODULE_CMD_WRITE,4);
+	fields[1].num_bits = 4;
+	fields[1].out_value = (uint8_t*) &out_cmd;
+	fields[1].in_value = NULL;
+  
+	/* 4-bit access type */
+	out_accesstype = flip_u32(out_accesstype,4);
+	fields[2].num_bits = 4;
+	fields[2].out_value = (uint8_t*) &out_accesstype;
+	fields[2].in_value = NULL;
+
+	/*32-bit address */
+	out_address = flip_u32(out_address,32);
+	fields[3].num_bits = 32;
+	fields[3].out_value = (uint8_t*) &out_address;
+	fields[3].in_value = NULL;
+
+	/*16-bit length */
+	/* Subtract 1 off it, as module does length+1 accesses */
+	out_length_bytes--;
+	out_length_bytes = flip_u32(out_length_bytes,16);
+	fields[4].num_bits = 16;
+	fields[4].out_value = (uint8_t*) &out_length_bytes;
+	fields[4].in_value = NULL;
+
+
+	/* CRC calculations */
+	out_crc = 0xffffffff;
+	out_crc = or1k_jtag_mohor_debug_crc_calc(out_crc, 
+						 out_module_select_bit);
+	for(i=0;i<4;i++)
+		out_crc = or1k_jtag_mohor_debug_crc_calc(out_crc, 
+							 ((out_cmd>>i)&0x1));
+	for(i=0;i<4;i++)
+		out_crc = or1k_jtag_mohor_debug_crc_calc(out_crc, 
+							 ((out_accesstype>>i)&
+							  0x1));
+	for(i=0;i<32;i++)
+		out_crc = or1k_jtag_mohor_debug_crc_calc(out_crc, 
+							 ((out_address>>i)&
+							  0x1));
+	for(i=0;i<16;i++)
+		out_crc = or1k_jtag_mohor_debug_crc_calc(out_crc, 
+							 ((out_length_bytes>>i)&
+							  0x1));
+
+
+	/* CRC going out */
+	out_crc = flip_u32(out_crc,32);
+	fields[5].num_bits = 32;
+	fields[5].out_value = (uint8_t*) &out_crc;
+	fields[5].in_value = NULL;
+
+	/* Status coming in */
+	fields[6].num_bits = 4;
+	fields[6].out_value = NULL;
+	fields[6].in_value = (uint8_t*) &in_status;
+
+	/* CRC coming in */
+	fields[7].num_bits = 32;
+	fields[7].out_value = NULL;
+	fields[7].in_value = (uint8_t*) &in_crc;
+  
+	jtag_add_dr_scan(tap, 8, fields, TAP_IDLE);
+
+	if (jtag_execute_queue() != ERROR_OK)
+	{
+		LOG_ERROR(" performing CPU CR write failed" );
+		return ERROR_FAIL;
+	}
+
+	/* Calculate expected CRC for status */
+	expected_in_crc = 0xffffffff;
+	for(i=0;i<4;i++)
+		expected_in_crc = 
+			or1k_jtag_mohor_debug_crc_calc(expected_in_crc, 
+						       ((in_status>>i)&0x1));
+	/* Check CRCs now */
+	/* Bit reverse received CRC */
+	expected_in_crc = flip_u32(expected_in_crc,32);
+	
+	if (in_crc != expected_in_crc)
+	{
+		LOG_ERROR(" received CRC (0x%08x) not same as calculated CRC (0x%08x)"
+			  , in_crc, expected_in_crc);
+		return ERROR_FAIL;
+	}
+  
+	if (in_status & OR1K_MOHORDBGIF_CMD_CRC_ERROR)
+	{
+		LOG_ERROR(" debug IF CPU command write status: CRC error"
+			  );
+		return ERROR_FAIL;
+	}
+	else if ((in_status&0xff) == OR1K_MOHORDBGIF_CMD_OK)
+	{
+		LOG_DEBUG(" debug IF command write OK");
+	}
+	else
+	{
+		LOG_ERROR(" debug IF command write: Unknown status (%d)"
+			  , in_status);
+		return ERROR_FAIL;
+	}
+
+	return ERROR_OK;
+
+}
+
+
+int or1k_jtag_mohor_debug_read_go(struct or1k_jtag *jtag_info, 
+				  int type_size_bytes,
+				  int length,
+				  uint8_t *data)
+{
+	LOG_DEBUG("Doing mohor debug read go for %d bytes",(type_size_bytes *
+							    length));
+	
+	assert(type_size_bytes > 0);
+	assert(type_size_bytes < 5);
+	
+	struct jtag_tap *tap;
+  
+	tap = jtag_info->tap;
+	if (tap == NULL)
+		return ERROR_FAIL;   
+
+	/*
+	 * Debug GO
+	 * Send:
+	 * {1'0, 4'gocmd,32'crc, ((len-1)*8)+4+32'x                 }
+	 * Receive:
+	 * {37'x               , ((len-1)*8)'data, 4'status, 32'crc }
+	 */
+
+	/* Figure out how many data fields we'll need. At present just do 1
+	   per byte, but in future, maybe figure out how we can do as many 
+	   32-bit fields as possible - might speed things up? */
+	int num_data_fields = length * type_size_bytes;
+
+	struct scan_field *fields = malloc(sizeof(struct scan_field) *
+					   (num_data_fields + 5));	
+		
+	uint32_t out_module_select_bit, out_cmd, out_crc;
+	uint32_t in_status =0, in_crc, expected_in_crc;
+	int i,j;
+  
+	/* 1st bit is module select, set to '0', we're not selecting a module */
+	out_module_select_bit = 0;
+
+	fields[0].num_bits = 1;
+	fields[0].out_value = (uint8_t*) &out_module_select_bit;
+	fields[0].in_value = NULL;
+
+	/* Instruction: go command , 4-bits */
+	out_cmd = flip_u32(OR1K_MOHORDBGIF_CPU_MODULE_CMD_GO,4);
+	fields[1].num_bits = 4;
+	fields[1].out_value = (uint8_t*) &out_cmd;
+	fields[1].in_value = NULL;
+
+	/* CRC calculations */
+	out_crc = 0xffffffff;
+	out_crc = or1k_jtag_mohor_debug_crc_calc(out_crc, 
+						 out_module_select_bit);
+	for(i=0;i<4;i++)
+		out_crc = or1k_jtag_mohor_debug_crc_calc(out_crc, 
+							 ((out_cmd>>i)&0x1));
+
+	/* CRC going out */
+	out_crc = flip_u32(out_crc,32);
+	fields[2].num_bits = 32;
+	fields[2].out_value = (uint8_t*) &out_crc;
+	fields[2].in_value = NULL;
+	
+	for(i=0;i< num_data_fields;i++)
+	{
+		fields[3+i].num_bits= 8;
+		fields[3+i].out_value = NULL;
+		fields[3+i].in_value = &data[i];
+	}
+	
+	/* Status coming in */
+	fields[3 + num_data_fields].num_bits = 4;
+	fields[3 + num_data_fields].out_value = NULL;
+	fields[3 + num_data_fields].in_value = (uint8_t*) &in_status;
+
+	/* CRC coming in */
+	fields[3 + num_data_fields + 1].num_bits = 32;
+	fields[3 + num_data_fields + 1].out_value = NULL;
+	fields[3 + num_data_fields + 1].in_value = (uint8_t*) &in_crc;
+  
+	jtag_add_dr_scan(tap, 3 + num_data_fields + 2, fields, TAP_IDLE);
+
+	if (jtag_execute_queue() != ERROR_OK)
+	{
+		LOG_ERROR("performing GO command failed");
+		
+		/* Free fields*/
+		free(fields);
+
+		return ERROR_FAIL;
+	}
+
+	
+	/* Free fields*/
+	free(fields);
+
+	/* Calculate expected CRC for data and status */
+	expected_in_crc = 0xffffffff;
+
+	LOG_DEBUG("Debug GO Rx data:");
+
+	for(i=0;i<num_data_fields;i++)
+	{
+		/* Process received data byte at a time */
+		/* Calculate CRC and bit-reverse data */
+		for(j=0;j<8;j++)
+			expected_in_crc = 
+				or1k_jtag_mohor_debug_crc_calc(expected_in_crc, 
+							       ((data[i]>>j)&
+								0x1));
+		
+		data[i] = flip_u32((uint32_t)data[i],8);
+		LOG_DEBUG("%02x",data[i]&0xff);
+	}
+
+	for(i=0;i<4;i++)
+		expected_in_crc = 
+			or1k_jtag_mohor_debug_crc_calc(expected_in_crc, 
+						       ((in_status>>i)&0x1));
+	/* Check CRCs now */
+	/* Bit reverse received CRC */
+	in_crc = flip_u32(in_crc,32);
+	
+	if (in_crc != expected_in_crc)
+	{
+		LOG_ERROR(" received CRC (0x%08x) not same as calculated CRC (0x%08x)"
+			  , in_crc, expected_in_crc);
+		return ERROR_FAIL;
+	}
+  
+	if (in_status & OR1K_MOHORDBGIF_CMD_CRC_ERROR)
+	{
+		LOG_ERROR(" debug IF go command status: CRC error"
+			  );
+		return ERROR_FAIL;
+	}
+	else if ((in_status&0xff) == OR1K_MOHORDBGIF_CMD_OK)
+	{
+		LOG_DEBUG(" debug IF go command OK");
+	}
+	else
+	{
+		LOG_ERROR(" debug IF go command: Unknown status (%d)"
+			  , in_status);
+		return ERROR_FAIL;
+	}
+
+	return ERROR_OK;
+
+}
+
+int or1k_jtag_mohor_debug_write_go(struct or1k_jtag *jtag_info, 
+				  int type_size_bytes,
+				  int length,
+				  uint8_t *data)
+{
+	LOG_DEBUG("Doing mohor debug write go for %d bytes",(type_size_bytes *
+							    length));
+	
+	assert(type_size_bytes > 0);
+	assert(type_size_bytes < 5);
+	
+	struct jtag_tap *tap;
+  
+	tap = jtag_info->tap;
+	if (tap == NULL)
+		return ERROR_FAIL;   
+
+	/*
+	 * Debug GO for write
+	 * Send:
+	 * {1'0, 4'gocmd,((len-1)*8)'data,32'crc, 4+32'x           }
+	 * Receive:
+	 * {37+((len-1)*8)'x                    , 4'status, 32'crc }
+	 */
+
+	/* Figure out how many data fields we'll need. At present just do 1
+	   per byte, but in future, maybe figure out how we can do as many 
+	   32-bit fields as possible - might speed things up? */
+	int num_data_fields = length * type_size_bytes;
+
+	struct scan_field *fields = malloc(sizeof(struct scan_field) *
+					   (num_data_fields + 5));	
+		
+	uint32_t out_module_select_bit, out_cmd, out_crc;
+	uint32_t in_status =0, in_crc, expected_in_crc;
+	int i,j;
+  
+	/* 1st bit is module select, set to '0', we're not selecting a module */
+	out_module_select_bit = 0;
+
+	fields[0].num_bits = 1;
+	fields[0].out_value = (uint8_t*) &out_module_select_bit;
+	fields[0].in_value = NULL;
+
+	/* Instruction: go command , 4-bits */
+	out_cmd = flip_u32(OR1K_MOHORDBGIF_CPU_MODULE_CMD_GO,4);
+	fields[1].num_bits = 4;
+	fields[1].out_value = (uint8_t*) &out_cmd;
+	fields[1].in_value = NULL;
+
+	for(i=0;i< num_data_fields;i++)
+	{
+		fields[2+i].num_bits= 8;
+		fields[2+i].out_value = &data[i];
+		fields[2+i].in_value = NULL;
+	}
+
+	/* CRC calculations */
+	out_crc = 0xffffffff;
+	out_crc = or1k_jtag_mohor_debug_crc_calc(out_crc, 
+						 out_module_select_bit);
+	for(i=0;i<4;i++)
+		out_crc = or1k_jtag_mohor_debug_crc_calc(out_crc, 
+							 ((out_cmd>>i)&0x1));
+
+	LOG_DEBUG("Debug GO Tx data:");
+	for(i=0;i<num_data_fields;i++)
+	{
+		/* Process received data byte at a time */
+		/* Calculate CRC and bit-reverse data */
+		for(j=0;j<8;j++)
+			out_crc = 
+				or1k_jtag_mohor_debug_crc_calc(out_crc, 
+							       ((data[i]>>j)&
+								0x1));
+		
+		data[i] = flip_u32((uint32_t)data[i],8);
+		LOG_DEBUG("%02x",data[i]&0xff);
+	}
+
+	/* CRC going out */
+	out_crc = flip_u32(out_crc,32);
+	fields[2 + num_data_fields].num_bits = 32;
+	fields[2 + num_data_fields].out_value = (uint8_t*) &out_crc;
+	fields[2 + num_data_fields].in_value = NULL;
+	
+	/* Status coming in */
+	fields[3 + num_data_fields].num_bits = 4;
+	fields[3 + num_data_fields].out_value = NULL;
+	fields[3 + num_data_fields].in_value = (uint8_t*) &in_status;
+
+	/* CRC coming in */
+	fields[3 + num_data_fields + 1].num_bits = 32;
+	fields[3 + num_data_fields + 1].out_value = NULL;
+	fields[3 + num_data_fields + 1].in_value = (uint8_t*) &in_crc;
+  
+	jtag_add_dr_scan(tap, 3 + num_data_fields + 2, fields, TAP_IDLE);
+
+	if (jtag_execute_queue() != ERROR_OK)
+	{
+		LOG_ERROR("performing GO command failed");
+		
+		/* Free fields*/
+		free(fields);
+
+		return ERROR_FAIL;
+	}
+
+	
+	/* Free fields*/
+	free(fields);
+
+	/* Calculate expected CRC for data and status */
+	expected_in_crc = 0xffffffff;
+
+
+	for(i=0;i<4;i++)
+		expected_in_crc = 
+			or1k_jtag_mohor_debug_crc_calc(expected_in_crc, 
+						       ((in_status>>i)&0x1));
+	/* Check CRCs now */
+	/* Bit reverse received CRC */
+	in_crc = flip_u32(in_crc,32);
+	
+	if (in_crc != expected_in_crc)
+	{
+		LOG_ERROR(" received CRC (0x%08x) not same as calculated CRC (0x%08x)"
+			  , in_crc, expected_in_crc);
+		return ERROR_FAIL;
+	}
+  
+	if (in_status & OR1K_MOHORDBGIF_CMD_CRC_ERROR)
+	{
+		LOG_ERROR(" debug IF go command status: CRC error"
+			  );
+		return ERROR_FAIL;
+	}
+	else if ((in_status&0xff) == OR1K_MOHORDBGIF_CMD_OK)
+	{
+		LOG_DEBUG(" debug IF go command OK");
+	}
+	else
+	{
+		LOG_ERROR(" debug IF go command: Unknown status (%d)"
+			  , in_status);
+		return ERROR_FAIL;
+	}
+
+	return ERROR_OK;
+
+}
+
+
+
 
 /* Currently hard set in functions to 32-bits */
 int or1k_jtag_read_cpu(struct or1k_jtag *jtag_info,
-		uint32_t addr, uint32_t *value)
+		       uint32_t addr, uint32_t *value)
 {
   
-  if (!or1k_jtag_inited)
-    or1k_jtag_init(jtag_info);
+	if (!or1k_jtag_inited)
+		or1k_jtag_init(jtag_info);
 
-  if (or1k_jtag_module_selected != OR1K_MOHORDBGIF_MODULE_CPU0)
-    or1k_jtag_mohor_debug_select_module(jtag_info, OR1K_MOHORDBGIF_MODULE_CPU0);
+	if (or1k_jtag_module_selected != OR1K_MOHORDBGIF_MODULE_CPU0)
+		or1k_jtag_mohor_debug_select_module(jtag_info, 
+						    OR1K_MOHORDBGIF_MODULE_CPU0
+			);
 
-  
+	/* Set command register to read a single word */
+	if (or1k_jtag_mohor_debug_set_command(jtag_info, 
+					      OR1K_MOHORDBGIF_CPU_ACC_READ,
+					      addr,
+					      4) != ERROR_OK)
+		return ERROR_FAIL;
 
+	if (or1k_jtag_mohor_debug_read_go(jtag_info, 4, 1,(uint8_t *)value) !=
+	    ERROR_OK)
+		return ERROR_FAIL;
 
-  /* TODO - this function! */
-
-  return ERROR_OK;
+	return ERROR_OK;
 }
 int or1k_jtag_write_cpu(struct or1k_jtag *jtag_info,
-		uint32_t addr, uint32_t value)
+			uint32_t addr, uint32_t value)
 {
-  LOG_DEBUG("%s: writing CPU reg: 0x%x",__func__, value);
+	LOG_DEBUG(" writing CPU reg: 0x%x", value);
 
-  if (!or1k_jtag_inited)
-    or1k_jtag_init(jtag_info);
+	if (!or1k_jtag_inited)
+		or1k_jtag_init(jtag_info);
 
-  if (or1k_jtag_module_selected != OR1K_MOHORDBGIF_MODULE_CPU0)
-    or1k_jtag_mohor_debug_select_module(jtag_info, OR1K_MOHORDBGIF_MODULE_CPU0);
+	if (or1k_jtag_module_selected != OR1K_MOHORDBGIF_MODULE_CPU0)
+		or1k_jtag_mohor_debug_select_module(jtag_info, 
+						    OR1K_MOHORDBGIF_MODULE_CPU0
+			);
 
-  return ERROR_OK;
+	/* Set command register to write a single word */
+	or1k_jtag_mohor_debug_set_command(jtag_info, 
+					  OR1K_MOHORDBGIF_CPU_ACC_WRITE,
+					  addr,
+					  4);
+
+	
+
+
+	return ERROR_OK;
 
 }
 
 
 int or1k_jtag_read_cpu_cr(struct or1k_jtag *jtag_info,
-		uint32_t *value)
+			  uint32_t *value)
 {
-  LOG_DEBUG("%s: reading CPU control reg",__func__);
+	/*LOG_DEBUG(" reading CPU control reg");*/
 
-  if (!or1k_jtag_inited)
-    or1k_jtag_init(jtag_info);
+	if (!or1k_jtag_inited)
+		or1k_jtag_init(jtag_info);
   
-  if (or1k_jtag_module_selected != OR1K_MOHORDBGIF_MODULE_CPU0)
-    or1k_jtag_mohor_debug_select_module(jtag_info, OR1K_MOHORDBGIF_MODULE_CPU0);
+	if (or1k_jtag_module_selected != OR1K_MOHORDBGIF_MODULE_CPU0)
+		or1k_jtag_mohor_debug_select_module(jtag_info, OR1K_MOHORDBGIF_MODULE_CPU0);
 
-  struct jtag_tap *tap;
+	struct jtag_tap *tap;
   
-  tap = jtag_info->tap;
-  if (tap == NULL)
-    return ERROR_FAIL;   
+	tap = jtag_info->tap;
+	if (tap == NULL)
+		return ERROR_FAIL;   
 
-  /*
-   * CPU control register write
-   * Send:
-   * {1'0, 4'command, 32'CRC, (52+4+32)'x                             }
-   * Receive:
-   * {37'x                  , 1'reset, 1'stall, 50'x, 4'status, 32'CRC}
-   */
-  struct scan_field fields[9];
-  uint32_t out_module_select_bit, out_cmd, out_crc;
-  uint32_t in_status, in_crc, expected_in_crc, in_reset = 0, in_stall = 0,
-    in_zeroes0, in_zeroes1;
-  int i;
+	/*
+	 * CPU control register write
+	 * Send:
+	 * {1'0, 4'command, 32'CRC, (52+4+32)'x                             }
+	 * Receive:
+	 * {37'x                  , 1'reset, 1'stall, 50'x, 4'status, 32'CRC}
+	 */
+	struct scan_field fields[9];
+	uint32_t out_module_select_bit, out_cmd, out_crc;
+	uint32_t in_status, in_crc, expected_in_crc, in_reset = 0, in_stall = 0,
+		in_zeroes0, in_zeroes1;
+	int i;
 
-  /* 1st bit is module select, set to '0', we're not selecting a module */
-  out_module_select_bit = 0;
+	/* 1st bit is module select, set to '0', we're not selecting a module */
+	out_module_select_bit = 0;
 
-  fields[0].num_bits = 1;
-  fields[0].out_value = (uint8_t*) &out_module_select_bit;
-  fields[0].in_value = NULL;
+	fields[0].num_bits = 1;
+	fields[0].out_value = (uint8_t*) &out_module_select_bit;
+	fields[0].in_value = NULL;
 
-  /* Command, 4-bits */
-  out_cmd = flip_u32(OR1K_MOHORDBGIF_CPU_MODULE_CMD_CTRL_READ,4);
-  fields[1].num_bits = 4;
-  fields[1].out_value = (uint8_t*) &out_cmd;
-  fields[1].in_value = NULL;
+	/* Command, 4-bits */
+	out_cmd = flip_u32(OR1K_MOHORDBGIF_CPU_MODULE_CMD_CTRL_READ,4);
+	fields[1].num_bits = 4;
+	fields[1].out_value = (uint8_t*) &out_cmd;
+	fields[1].in_value = NULL;
 
-  /* CRC calculations */
-  out_crc = 0xffffffff;
-  out_crc = or1k_jtag_mohor_debug_crc_calc(out_crc, out_module_select_bit);
-  for(i=0;i<4;i++)
-    out_crc = or1k_jtag_mohor_debug_crc_calc(out_crc, ((out_cmd>>i)&0x1));
-  out_crc = flip_u32(out_crc,32);
+	/* CRC calculations */
+	out_crc = 0xffffffff;
+	out_crc = or1k_jtag_mohor_debug_crc_calc(out_crc, out_module_select_bit);
+	for(i=0;i<4;i++)
+		out_crc = or1k_jtag_mohor_debug_crc_calc(out_crc, ((out_cmd>>i)&0x1));
+	out_crc = flip_u32(out_crc,32);
 
-  /* CRC going out */
-  fields[2].num_bits = 32;
-  fields[2].out_value = (uint8_t*) &out_crc;
-  fields[2].in_value = NULL;
+	/* CRC going out */
+	fields[2].num_bits = 32;
+	fields[2].out_value = (uint8_t*) &out_crc;
+	fields[2].in_value = NULL;
 
   
-  /* 52-bit control register */
-  fields[3].num_bits = 1;
-  fields[3].out_value = NULL;
-  fields[3].in_value = (uint8_t*) &in_reset;
+	/* 52-bit control register */
+	fields[3].num_bits = 1;
+	fields[3].out_value = NULL;
+	fields[3].in_value = (uint8_t*) &in_reset;
 
-  fields[4].num_bits = 1;
-  fields[4].out_value = NULL;
-  fields[4].in_value = (uint8_t*) &in_stall;
+	fields[4].num_bits = 1;
+	fields[4].out_value = NULL;
+	fields[4].in_value = (uint8_t*) &in_stall;
 
-  /* Assuming the next 50 bits will always be 0 */
-  fields[5].num_bits = 32;
-  fields[5].out_value = NULL;
-  fields[5].in_value = (uint8_t*) &in_zeroes0;
+	/* Assuming the next 50 bits will always be 0 */
+	fields[5].num_bits = 32;
+	fields[5].out_value = NULL;
+	fields[5].in_value = (uint8_t*) &in_zeroes0;
 
-  fields[6].num_bits = 18;
-  fields[6].out_value = NULL;
-  fields[6].in_value = (uint8_t*) &in_zeroes1;
+	fields[6].num_bits = 18;
+	fields[6].out_value = NULL;
+	fields[6].in_value = (uint8_t*) &in_zeroes1;
   
-  /* Status coming in */
-  fields[7].num_bits = 4;
-  fields[7].out_value = NULL;
-  fields[7].in_value = (uint8_t*) &in_status;
+	/* Status coming in */
+	fields[7].num_bits = 4;
+	fields[7].out_value = NULL;
+	fields[7].in_value = (uint8_t*) &in_status;
 
-  /* CRC coming in */
-  fields[8].num_bits = 32;
-  fields[8].out_value = NULL;
-  fields[8].in_value = (uint8_t*) &in_crc;
+	/* CRC coming in */
+	fields[8].num_bits = 32;
+	fields[8].out_value = NULL;
+	fields[8].in_value = (uint8_t*) &in_crc;
   
-  jtag_add_dr_scan(tap, 9, fields, TAP_IDLE);
+	jtag_add_dr_scan(tap, 9, fields, TAP_IDLE);
 
-  if (jtag_execute_queue() != ERROR_OK)
-    {
-      LOG_ERROR("%s: performing CPU CR read failed", __func__);
-      return ERROR_FAIL;
-    }
+	if (jtag_execute_queue() != ERROR_OK)
+	{
+		LOG_ERROR(" performing CPU CR read failed" );
+		return ERROR_FAIL;
+	}
 
-  /*
-  LOG_DEBUG("in_zeroes0: 0x%08x, in_zeroes1: 0x%08x",in_zeroes0,
-	    in_zeroes1 & 0x3ffff);
-  */
+	/*
+	  LOG_DEBUG("in_zeroes0: 0x%08x, in_zeroes1: 0x%08x",in_zeroes0,
+	  in_zeroes1 & 0x3ffff);
+	*/
 
-  /* Calculate expected CRC for status */
-  expected_in_crc = 0xffffffff;
-  expected_in_crc = or1k_jtag_mohor_debug_crc_calc(expected_in_crc, in_reset);
-  expected_in_crc = or1k_jtag_mohor_debug_crc_calc(expected_in_crc, in_stall);
-  /* Assuming next 50 bits are zero - we don't check, though!*/
-  for(i=0;i<32;i++)
-    expected_in_crc = or1k_jtag_mohor_debug_crc_calc(expected_in_crc, 
-						     ((in_zeroes0>>i)&0x1));
-  for(i=0;i<18;i++)
-    expected_in_crc = or1k_jtag_mohor_debug_crc_calc(expected_in_crc, 
-						     ((in_zeroes1>>i)&0x1));
-  for(i=0;i<4;i++)
-    expected_in_crc = or1k_jtag_mohor_debug_crc_calc(expected_in_crc, 
-						     ((in_status>>i)&0x1));
-  /* Check CRCs now */
-  /* Bit reverse received CRC */
-  expected_in_crc = flip_u32(expected_in_crc,32);
+	/* Calculate expected CRC for status */
+	expected_in_crc = 0xffffffff;
+	expected_in_crc = or1k_jtag_mohor_debug_crc_calc(expected_in_crc, in_reset);
+	expected_in_crc = or1k_jtag_mohor_debug_crc_calc(expected_in_crc, in_stall);
+	/* Assuming next 50 bits are zero - we don't check, though!*/
+	for(i=0;i<32;i++)
+		expected_in_crc = or1k_jtag_mohor_debug_crc_calc(expected_in_crc, 
+								 ((in_zeroes0>>i)&0x1));
+	for(i=0;i<18;i++)
+		expected_in_crc = or1k_jtag_mohor_debug_crc_calc(expected_in_crc, 
+								 ((in_zeroes1>>i)&0x1));
+	for(i=0;i<4;i++)
+		expected_in_crc = or1k_jtag_mohor_debug_crc_calc(expected_in_crc, 
+								 ((in_status>>i)&0x1));
+	/* Check CRCs now */
+	/* Bit reverse received CRC */
+	expected_in_crc = flip_u32(expected_in_crc,32);
 
-  if (in_crc != expected_in_crc)
-    {
-      LOG_ERROR("%s: received CRC (0x%08x) not same as calculated CRC (0x%08x)",
-		__func__, in_crc, expected_in_crc);
-      return ERROR_FAIL;
-    }
+	if (in_crc != expected_in_crc)
+	{
+		LOG_ERROR(" received CRC (0x%08x) not same as calculated CRC (0x%08x)"
+			  , in_crc, expected_in_crc);
+		return ERROR_FAIL;
+	}
   
-  if (in_status & OR1K_MOHORDBGIF_CMD_CRC_ERROR)
-    {
-      LOG_ERROR("%s: debug IF CPU CR read status: CRC error",__func__);
-      return ERROR_FAIL;
-    }
-  else if ((in_status&0xf) == OR1K_MOHORDBGIF_CMD_OK)
-    {
-      LOG_DEBUG("%s: debug IF CPU CR read OK",__func__);
-    }
-  else
-    {
-      LOG_ERROR("%s: debug IF CPU CR read: Unknown status (%d)",
-		__func__, in_status);
-      return ERROR_FAIL;
-    }
+	if (in_status & OR1K_MOHORDBGIF_CMD_CRC_ERROR)
+	{
+		LOG_ERROR(" debug IF CPU CR read status: CRC error");
+		return ERROR_FAIL;
+	}
+	else if ((in_status&0xf) == OR1K_MOHORDBGIF_CMD_OK)
+	{
+		/*LOG_DEBUG(" debug IF CPU CR read OK");*/
+	}
+	else
+	{
+		LOG_ERROR(" debug IF CPU CR read: Unknown status (%d)"
+			  , in_status);
+		return ERROR_FAIL;
+	}
 
-  /* Convey status of control register */
-  *value = 0;
+	/* Convey status of control register */
+	*value = 0;
   
-  LOG_DEBUG("CPU CR reset bit: %0x",in_reset & 0x1);
-  LOG_DEBUG("CPU CR stall bit: %0x",in_stall & 0x1);
-  
-  if (in_reset & 0x1)
-    *value |= OR1K_MOHORDBGIF_CPU_CR_RESET;
+	/*
+	LOG_DEBUG("CPU CR reset bit: %0x",in_reset & 0x1);
+	LOG_DEBUG("CPU CR stall bit: %0x",in_stall & 0x1);
+	*/
+
+	if (in_reset & 0x1)
+		*value |= OR1K_MOHORDBGIF_CPU_CR_RESET;
     
   
-  if (in_stall & 0x1)
-    {
-      *value |= OR1K_MOHORDBGIF_CPU_CR_STALL;
-    }
+	if (in_stall & 0x1)
+	{
+		*value |= OR1K_MOHORDBGIF_CPU_CR_STALL;
+	}
 
-  return ERROR_OK;
+	return ERROR_OK;
 }
 
 int or1k_jtag_write_cpu_cr(struct or1k_jtag *jtag_info,
 			   uint32_t stall, uint32_t reset)
 {
 
-  LOG_DEBUG("%s: writing CPU control reg, reset: %d, stall: %d",__func__, 
-	    reset, stall);
+	LOG_DEBUG(" writing CPU control reg, reset: %d, stall: %d", 
+		  reset, stall);
 
-  if (!or1k_jtag_inited)
-    or1k_jtag_init(jtag_info);
+	if (!or1k_jtag_inited)
+		or1k_jtag_init(jtag_info);
 
-  if (or1k_jtag_module_selected != OR1K_MOHORDBGIF_MODULE_CPU0)
-    or1k_jtag_mohor_debug_select_module(jtag_info, OR1K_MOHORDBGIF_MODULE_CPU0);
+	if (or1k_jtag_module_selected != OR1K_MOHORDBGIF_MODULE_CPU0)
+		or1k_jtag_mohor_debug_select_module(jtag_info, 
+						    OR1K_MOHORDBGIF_MODULE_CPU0);
 
       
-  struct jtag_tap *tap;
+	struct jtag_tap *tap;
   
-  tap = jtag_info->tap;
-  if (tap == NULL)
-    return ERROR_FAIL;   
+	tap = jtag_info->tap;
+	if (tap == NULL)
+		return ERROR_FAIL;   
 
-  /*
-   * CPU control register write
-   * Send:
-   * {1'0, 4'command, 1'reset, 1'stall, 50'0, 32'CRC, 36'x            }
-   * Receive:
-   * {89'x                                          , 4'status, 32'CRC}
-   */
-  struct scan_field fields[9];
-  uint32_t out_module_select_bit, out_cmd, out_crc;
-  uint32_t in_status, in_crc, expected_in_crc;
-  int i;
+	/*
+	 * CPU control register write
+	 * Send:
+	 * {1'0, 4'command, 1'reset, 1'stall, 50'0, 32'CRC, 36'x            }
+	 * Receive:
+	 * {89'x                                          , 4'status, 32'CRC}
+	 */
+	struct scan_field fields[9];
+	uint32_t out_module_select_bit, out_cmd, out_crc;
+	uint32_t in_status, in_crc, expected_in_crc;
+	int i;
   
-  /* 1st bit is module select, set to '0', we're not selecting a module */
-  out_module_select_bit = 0;
+	/* 1st bit is module select, set to '0', we're not selecting a module */
+	out_module_select_bit = 0;
 
-  fields[0].num_bits = 1;
-  fields[0].out_value = (uint8_t*) &out_module_select_bit;
-  fields[0].in_value = NULL;
+	fields[0].num_bits = 1;
+	fields[0].out_value = (uint8_t*) &out_module_select_bit;
+	fields[0].in_value = NULL;
 
-  /* Command, 4-bits */
-  out_cmd = flip_u32(OR1K_MOHORDBGIF_CPU_MODULE_CMD_CTRL_WRITE,4);
-  fields[1].num_bits = 4;
-  fields[1].out_value = (uint8_t*) &out_cmd;
-  fields[1].in_value = NULL;
+	/* Command, 4-bits */
+	out_cmd = flip_u32(OR1K_MOHORDBGIF_CPU_MODULE_CMD_CTRL_WRITE,4);
+	fields[1].num_bits = 4;
+	fields[1].out_value = (uint8_t*) &out_cmd;
+	fields[1].in_value = NULL;
   
-  /* 52-bit control register */
-  fields[2].num_bits = 1;
-  fields[2].out_value = (uint8_t*) &reset;
-  fields[2].in_value = NULL;
+	/* 52-bit control register */
+	fields[2].num_bits = 1;
+	fields[2].out_value = (uint8_t*) &reset;
+	fields[2].in_value = NULL;
 
-  fields[3].num_bits = 1;
-  fields[3].out_value = (uint8_t*) &stall;
-  fields[3].in_value = NULL;
+	fields[3].num_bits = 1;
+	fields[3].out_value = (uint8_t*) &stall;
+	fields[3].in_value = NULL;
 
-  fields[4].num_bits = 32;
-  fields[4].out_value = NULL;
-  fields[4].in_value = NULL;
+	fields[4].num_bits = 32;
+	fields[4].out_value = NULL;
+	fields[4].in_value = NULL;
 
-  fields[5].num_bits = 18;
-  fields[5].out_value = NULL;
-  fields[5].in_value = NULL;
+	fields[5].num_bits = 18;
+	fields[5].out_value = NULL;
+	fields[5].in_value = NULL;
 
-  /* CRC calculations */
-  out_crc = 0xffffffff;
-  out_crc = or1k_jtag_mohor_debug_crc_calc(out_crc, out_module_select_bit);
-  for(i=0;i<4;i++)
-    out_crc = or1k_jtag_mohor_debug_crc_calc(out_crc, ((out_cmd>>i)&0x1));
-  out_crc = or1k_jtag_mohor_debug_crc_calc(out_crc, reset);
-  out_crc = or1k_jtag_mohor_debug_crc_calc(out_crc, stall);
-  for(i=0;i<50;i++)
-    out_crc = or1k_jtag_mohor_debug_crc_calc(out_crc, 0);
-  out_crc = flip_u32(out_crc,32);
+	/* CRC calculations */
+	out_crc = 0xffffffff;
+	out_crc = or1k_jtag_mohor_debug_crc_calc(out_crc, out_module_select_bit);
+	for(i=0;i<4;i++)
+		out_crc = or1k_jtag_mohor_debug_crc_calc(out_crc, ((out_cmd>>i)&0x1));
+	out_crc = or1k_jtag_mohor_debug_crc_calc(out_crc, reset);
+	out_crc = or1k_jtag_mohor_debug_crc_calc(out_crc, stall);
+	for(i=0;i<50;i++)
+		out_crc = or1k_jtag_mohor_debug_crc_calc(out_crc, 0);
+	out_crc = flip_u32(out_crc,32);
 
-  /* CRC going out */
-  fields[6].num_bits = 32;
-  fields[6].out_value = (uint8_t*) &out_crc;
-  fields[6].in_value = NULL;
+	/* CRC going out */
+	fields[6].num_bits = 32;
+	fields[6].out_value = (uint8_t*) &out_crc;
+	fields[6].in_value = NULL;
 
-  /* Status coming in */
-  fields[7].num_bits = 4;
-  fields[7].out_value = NULL;
-  fields[7].in_value = (uint8_t*) &in_status;
+	/* Status coming in */
+	fields[7].num_bits = 4;
+	fields[7].out_value = NULL;
+	fields[7].in_value = (uint8_t*) &in_status;
 
-  /* CRC coming in */
-  fields[8].num_bits = 32;
-  fields[8].out_value = NULL;
-  fields[8].in_value = (uint8_t*) &in_crc;
+	/* CRC coming in */
+	fields[8].num_bits = 32;
+	fields[8].out_value = NULL;
+	fields[8].in_value = (uint8_t*) &in_crc;
   
-  jtag_add_dr_scan(tap, 9, fields, TAP_IDLE);
+	jtag_add_dr_scan(tap, 9, fields, TAP_IDLE);
 
-  if (jtag_execute_queue() != ERROR_OK)
-    {
-      LOG_ERROR("%s: performing CPU CR write failed", __func__);
-      return ERROR_FAIL;
-    }
+	if (jtag_execute_queue() != ERROR_OK)
+	{
+		LOG_ERROR(" performing CPU CR write failed" );
+		return ERROR_FAIL;
+	}
 
-  /* Calculate expected CRC for status */
-  expected_in_crc = 0xffffffff;
-  for(i=0;i<4;i++)
-    expected_in_crc = or1k_jtag_mohor_debug_crc_calc(expected_in_crc, 
-						     ((in_status>>i)&0x1));
-  /* Check CRCs now */
-  /* Bit reverse received CRC */
-  expected_in_crc = flip_u32(expected_in_crc,32);
+	/* Calculate expected CRC for status */
+	expected_in_crc = 0xffffffff;
+	for(i=0;i<4;i++)
+		expected_in_crc = or1k_jtag_mohor_debug_crc_calc(expected_in_crc, 
+								 ((in_status>>i)&0x1));
+	/* Check CRCs now */
+	/* Bit reverse received CRC */
+	expected_in_crc = flip_u32(expected_in_crc,32);
 
-  if (in_crc != expected_in_crc)
-    {
-      LOG_ERROR("%s: received CRC (0x%08x) not same as calculated CRC (0x%08x)",
-		__func__, in_crc, expected_in_crc);
-      return ERROR_FAIL;
-    }
+	if (in_crc != expected_in_crc)
+	{
+		LOG_ERROR(" received CRC (0x%08x) not same as calculated CRC (0x%08x)"
+			  , in_crc, expected_in_crc);
+		return ERROR_FAIL;
+	}
   
-  if (in_status & OR1K_MOHORDBGIF_CMD_CRC_ERROR)
-    {
-      LOG_ERROR("%s: debug IF CPU CR write status: CRC error",__func__);
-      return ERROR_FAIL;
-    }
-  else if (in_status == OR1K_MOHORDBGIF_CMD_OK)
-    {
-      LOG_DEBUG("%s: debug IF CPU CR write OK",__func__);
-    }
-  else
-    {
-      LOG_ERROR("%s: debug IF module select status: Unknown status (%d)",
-		__func__, in_status);
-      return ERROR_FAIL;
-    }
+	if (in_status & OR1K_MOHORDBGIF_CMD_CRC_ERROR)
+	{
+		LOG_ERROR(" debug IF CPU CR write status: CRC error");
+		return ERROR_FAIL;
+	}
+	else if ((in_status&0xff) == OR1K_MOHORDBGIF_CMD_OK)
+	{
+		LOG_DEBUG(" debug IF CPU CR write OK");
+	}
+	else
+	{
+		LOG_ERROR(" debug IF module select status: Unknown status (%d)"
+			  , in_status);
+		return ERROR_FAIL;
+	}
 
-  return ERROR_OK;
+	return ERROR_OK;
 }
 
 
 
 
 int or1k_jtag_read_memory32(struct or1k_jtag *jtag_info, 
-		uint32_t addr, int count, uint32_t *buffer)
+			    uint32_t addr, int count, uint32_t *buffer)
 {
-  /* TODO - this function! */
-  return ERROR_OK;
+	if (!or1k_jtag_inited)
+		or1k_jtag_init(jtag_info);
+
+	if (or1k_jtag_module_selected != OR1K_MOHORDBGIF_MODULE_WB)
+		or1k_jtag_mohor_debug_select_module(jtag_info, 
+						    OR1K_MOHORDBGIF_MODULE_WB);
+
+	/* Set command register to read a single word */
+	if (or1k_jtag_mohor_debug_set_command(jtag_info, 
+					      OR1K_MOHORDBGIF_WB_ACC_READ32,
+					      addr,
+					      count*4) != ERROR_OK)
+		return ERROR_FAIL;
+
+	if (or1k_jtag_mohor_debug_read_go(jtag_info, 4, count,(uint8_t *)buffer)
+	    != ERROR_OK)
+		return ERROR_FAIL;
+
+	return ERROR_OK;
+
 }
 int or1k_jtag_read_memory16(struct or1k_jtag *jtag_info, 
-		uint32_t addr, int count, uint16_t *buffer)
+			    uint32_t addr, int count, uint16_t *buffer)
 {
-  /* TODO - this function! */
-  return ERROR_OK;
+	/* TODO - this function! */
+	return ERROR_OK;
 }
 int or1k_jtag_read_memory8(struct or1k_jtag *jtag_info, 
-		uint32_t addr, int count, uint8_t *buffer)
+			   uint32_t addr, int count, uint8_t *buffer)
 {
-  /* TODO - this function! */
-  return ERROR_OK;
+	/* TODO - this function! */
+	return ERROR_OK;
 }
 
 int or1k_jtag_write_memory32(struct or1k_jtag *jtag_info, 
-		uint32_t addr, int count, const uint32_t *buffer)
+			     uint32_t addr, int count, const uint32_t *buffer)
 {
-  /* TODO - this function! */
-  return ERROR_OK;
+
+	if (!or1k_jtag_inited)
+		or1k_jtag_init(jtag_info);
+
+	if (or1k_jtag_module_selected != OR1K_MOHORDBGIF_MODULE_WB)
+		or1k_jtag_mohor_debug_select_module(jtag_info, 
+						    OR1K_MOHORDBGIF_MODULE_WB);
+
+	/* Set command register to read a single word */
+	if (or1k_jtag_mohor_debug_set_command(jtag_info, 
+					      OR1K_MOHORDBGIF_WB_ACC_WRITE32,
+					      addr,
+					      count*4) != ERROR_OK)
+		return ERROR_FAIL;
+
+	if (or1k_jtag_mohor_debug_write_go(jtag_info, 4, count,(uint8_t *)buffer)
+	    != ERROR_OK)
+		return ERROR_FAIL;
+
+	return ERROR_OK;
+
 }
 int or1k_jtag_write_memory16(struct or1k_jtag *jtag_info, 
-		uint32_t addr, int count, const uint16_t *buffer)
+			     uint32_t addr, int count, const uint16_t *buffer)
 {
-  /* TODO - this function! */
-  return ERROR_OK;
+	/* TODO - this function! */
+	return ERROR_OK;
 }
 int or1k_jtag_write_memory8(struct or1k_jtag *jtag_info, 
-		uint32_t addr, int count, const uint8_t *buffer)
+			    uint32_t addr, int count, const uint8_t *buffer)
 {
-  /* TODO - this function! */
-  return ERROR_OK;
+	/* TODO - this function! */
+	return ERROR_OK;
 }
 
 
@@ -575,20 +1090,27 @@ int or1k_jtag_read_regs(struct or1k_jtag *jtag_info, uint32_t *regs)
 {
 	int i;
 
+	LOG_DEBUG("Enter");
+
 	/* read core registers */
 	for (i = 0; i < OR1KNUMCOREREGS - 1; i++) 
-		or1k_jtag_read_cpu(jtag_info, i, regs + i);
+		or1k_jtag_read_cpu(jtag_info, 
+				   /* or1k spr address is in second field of
+				      or1k_core_reg_list_arch_info
+				   */
+				   or1k_core_reg_list_arch_info[i].spr_num,
+				   regs + i);
 
 	/* read status register */
 	/*
-	retval = or1k_jtag_exec(jtag_info, MFSR(0, 0));
-	if (retval != ERROR_OK)
-		return retval;
+	  retval = or1k_jtag_exec(jtag_info, MFSR(0, 0));
+	  if (retval != ERROR_OK)
+	  return retval;
 	*/
 	/*
-	retval = or1k_jtag_read_reg(jtag_info, 0, regs + AVR32_REG_SR);
+	  retval = or1k_jtag_read_reg(jtag_info, 0, regs + AVR32_REG_SR);
 
-	return retval;
+	  return retval;
 	*/
 	return ERROR_OK;
 }
@@ -598,13 +1120,13 @@ int or1k_jtag_write_regs(struct or1k_jtag *jtag_info, uint32_t *regs)
 	int i;
 	
 	/*
-	retval = or1k_jtag_write_reg(jtag_info, 0, regs[OR1K_REG_SR]);
+	  retval = or1k_jtag_write_reg(jtag_info, 0, regs[OR1K_REG_SR]);
 	*/
 	/* Restore Status reg */
         /*
-	retval = or1k_jtag_exec(jtag_info, MTSR(0, 0));
-	if (retval != ERROR_OK)
-		return retval;
+	  retval = or1k_jtag_exec(jtag_info, MTSR(0, 0));
+	  if (retval != ERROR_OK)
+	  return retval;
 	*/
 	/*
 	 * And now the rest of registers

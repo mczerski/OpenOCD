@@ -38,47 +38,48 @@ static char* or1k_core_reg_list[] =
 	"r9", "r10", "r11", "r12", "r13", "r14", "r15", "r16",
 	"r17", "r18", "r19", "r20", "r21", "r22", "r23", "r24",
 	"r25", "r26", "r27", "r28", "r29", "r30", "r31",
-	"pc", "sr"
+	"ppc", "npc", "sr"
 };
 
-static struct or1k_core_reg 
-	or1k_core_reg_list_arch_info[OR1KNUMCOREREGS] =
-{
-	{0, NULL, NULL},
-	{1, NULL, NULL},
-	{2, NULL, NULL},
-	{3, NULL, NULL},
-	{4, NULL, NULL},
-	{5, NULL, NULL},
-	{6, NULL, NULL},
-	{7, NULL, NULL},
-	{8, NULL, NULL},
-	{9, NULL, NULL},
-	{10, NULL, NULL},
-	{11, NULL, NULL},
-	{12, NULL, NULL},
-	{13, NULL, NULL},
-	{14, NULL, NULL},
-	{15, NULL, NULL},
-	{16, NULL, NULL},
-	{17, NULL, NULL},
-	{18, NULL, NULL},
-	{19, NULL, NULL},
-	{20, NULL, NULL},
-	{21, NULL, NULL},
-	{22, NULL, NULL},
-	{23, NULL, NULL},
-	{24, NULL, NULL},
-	{25, NULL, NULL},
-	{26, NULL, NULL},
-	{27, NULL, NULL},
-	{28, NULL, NULL},
-	{29, NULL, NULL},
-	{30, NULL, NULL},
-	{31, NULL, NULL},
-	{32, NULL, NULL},
-	{33, NULL, NULL},
-};
+struct or1k_core_reg 
+or1k_core_reg_list_arch_info[OR1KNUMCOREREGS] =
+  {
+	  {0, 1024, NULL, NULL, },
+	  {1, 1025, NULL, NULL},
+	  {2, 1026, NULL, NULL},
+	  {3, 1027, NULL, NULL},
+	  {4, 1028, NULL, NULL},
+	  {5, 1029, NULL, NULL},
+	  {6, 1030, NULL, NULL},
+	  {7, 1031, NULL, NULL},
+	  {8, 1032, NULL, NULL},
+	  {9, 1033, NULL, NULL},
+	  {10, 1034, NULL, NULL},
+	  {11, 1035, NULL, NULL},
+	  {12, 1036, NULL, NULL},
+	  {13, 1037, NULL, NULL},
+	  {14, 1038, NULL, NULL},
+	  {15, 1039, NULL, NULL},
+	  {16, 1040, NULL, NULL},
+	  {17, 1041, NULL, NULL},
+	  {18, 1042, NULL, NULL},
+	  {19, 1043, NULL, NULL},
+	  {20, 1044, NULL, NULL},
+	  {21, 1045, NULL, NULL},
+	  {22, 1046, NULL, NULL},
+	  {23, 1047, NULL, NULL},
+	  {24, 1048, NULL, NULL},
+	  {25, 1049, NULL, NULL},
+	  {26, 1050, NULL, NULL},
+	  {27, 1051, NULL, NULL},
+	  {28, 1052, NULL, NULL},
+	  {29, 1053, NULL, NULL},
+	  {30, 1054, NULL, NULL},
+	  {31, 1055, NULL, NULL},
+	  {32, 18, NULL, NULL},
+	  {33, 16, NULL, NULL},
+	  {34, 17, NULL, NULL},
+  };
 
 
 static int or1k_read_core_reg(struct target *target, int num);
@@ -173,7 +174,7 @@ static int or1k_get_core_reg(struct reg *reg)
 		return ERROR_TARGET_NOT_HALTED;
 	}
 
-	retval = or1k_read_core_reg(target, or1k_reg->num);
+	retval = or1k_read_core_reg(target, or1k_reg->list_num);
 
 	return retval;
 }
@@ -395,7 +396,7 @@ static int or1k_resume(struct target *target, int current,
 	 * register cache and continue - Julius
 	 */
 	resume_pc = 
-		buf_get_u32(or1k->core_cache->reg_list[OR1K_REG_PC].value, 
+		buf_get_u32(or1k->core_cache->reg_list[OR1K_REG_PPC].value, 
 			    0, 32);
 	or1k_restore_context(target);
 
@@ -639,11 +640,21 @@ int or1k_arch_state(struct target *target)
    	return ERROR_OK;
 }
 
-int or1k_get_gdb_reg_list(struct target *target, struct reg **reg_list[], int *reg_list_size)
+int or1k_get_gdb_reg_list(struct target *target, struct reg **reg_list[], 
+			  int *reg_list_size)
 {
+	struct or1k_common *or1k = target_to_or1k(target);
+	int i;
+	
+	*reg_list_size = OR1KNUMCOREREGS;
+	*reg_list = malloc(sizeof(struct reg*) * (*reg_list_size));
 
-	LOG_ERROR("%s: implement me", __func__);
-	return ERROR_FAIL;
+	for (i = 0; i < OR1KNUMCOREREGS; i++)
+		(*reg_list)[i] = &or1k->core_cache->reg_list[i] 
+			/*+ arm->map[regnum];*/;
+
+	return ERROR_OK;
+
 }
 
 

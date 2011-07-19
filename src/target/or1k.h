@@ -26,10 +26,10 @@
 
 struct target;
 
-#define OR1KNUMCOREREGS 34
+#define OR1KNUMCOREREGS (32 + 3)
 
 
-enum avr32_reg_nums {
+enum or1k_reg_nums {
 	OR1K_REG_R0 = 0,
 	OR1K_REG_R1,
 	OR1K_REG_R2,
@@ -62,8 +62,9 @@ enum avr32_reg_nums {
 	OR1K_REG_R29,
 	OR1K_REG_R30,
 	OR1K_REG_R31,
-	OR1K_REG_PC,
-	OR1K_REG_SR,
+	OR1K_REG_PPC,
+	OR1K_REG_NPC,
+	OR1K_REG_SR
 };
 
 
@@ -82,11 +83,14 @@ target_to_or1k(struct target *target)
 
 struct or1k_core_reg
 {
-	uint32_t num;
+	uint32_t list_num; /* Index in register cache */
+	uint32_t spr_num; /* Number in architecture's SPR space */
 	struct target *target;
 	struct or1k_common *or1k_common;
+
 };
 
-
+/* Make this available to or1k_jtag.h */
+extern struct or1k_core_reg or1k_core_reg_list_arch_info[OR1KNUMCOREREGS];
 
 #endif
