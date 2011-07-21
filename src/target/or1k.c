@@ -249,54 +249,6 @@ static int or1k_debug_entry(struct target *target)
 	return ERROR_OK;
 }
 
-
-static int or1k_poll(struct target *target)
-{
-	uint32_t cpu_cr;
-	int retval;
-	struct or1k_common *or1k = target_to_or1k(target);
-
-	/* Possible specific to Mohor debug interface - others may have to do
-	 * something different here. 
-	 */
-	retval = or1k_jtag_read_cpu_cr(&or1k->jtag, &cpu_cr);
-	if (retval != ERROR_OK)
-		return retval;
-
-	/* check for processor halted */
-	if (cpu_cr & OR1K_MOHORDBGIF_CPU_CR_STALL)
-	{
-		if ((target->state == TARGET_RUNNING) || 
-		    (target->state == TARGET_RESET))
-		{
-			target->state = TARGET_HALTED;
-
-			if ((retval = or1k_debug_entry(target)) != ERROR_OK)
-				return retval;
-
-			target_call_event_callbacks(target, 
-						    TARGET_EVENT_HALTED);
-		}
-		else if (target->state == TARGET_DEBUG_RUNNING)
-		{
-			target->state = TARGET_HALTED;
-
-			if ((retval = or1k_debug_entry(target)) != ERROR_OK)
-				return retval;
-
-			target_call_event_callbacks(target, 
-						    TARGET_EVENT_DEBUG_HALTED);
-		}
-	}
-	else
-	{
-		target->state = TARGET_RUNNING;
-	}
-
-
-	return ERROR_OK;
-}
-
 static int or1k_halt(struct target *target)
 {
 	struct or1k_common *or1k = target_to_or1k(target);
@@ -335,6 +287,74 @@ static int or1k_halt(struct target *target)
 	or1k_jtag_write_cpu_cr(&or1k->jtag, 1, 0);
 
 	target->debug_reason = DBG_REASON_DBGRQ;
+
+	return ERROR_OK;
+}
+
+static int or1k_poll(struct target *target)
+{
+	uint32_t cpu_cr;
+	int retval;
+	struct or1k_common *or1k = target_to_or1k(target);
+
+	/* Possible specific to Mohor debug interface - others may have to do
+	 * something different here. 
+	 */
+	retval = or1k_jtag_read_cpu_cr(&or1k->jtag, &cpu_cr);
+	if (retval != ERROR_OK)
+	{
+		/* Try once to restart the JTAG infrastructure -
+		   quite possibly the board has just been reset. */
+		or1k_jtag_init(&or1k->jtag);
+
+		retval = or1k_jtag_read_cpu_cr(&or1k->jtag, &cpu_cr);
+		if (retval != ERROR_OK)
+			return retval;
+
+	}
+
+	/* check for processor halted */
+	if (cpu_cr & OR1K_MOHORDBGIF_CPU_CR_STALL)
+	{
+		if ((target->state == TARGET_RUNNING) || 
+		    (target->state == TARGET_RESET))
+		{
+			target->state = TARGET_HALTED;
+
+			if ((retval = or1k_debug_entry(target)) != ERROR_OK)
+				return retval;
+
+			target_call_event_callbacks(target, 
+						    TARGET_EVENT_HALTED);
+		}
+		else if (target->state == TARGET_DEBUG_RUNNING)
+		{
+			target->state = TARGET_HALTED;
+
+			if ((retval = or1k_debug_entry(target)) != ERROR_OK)
+				return retval;
+
+			target_call_event_callbacks(target, 
+						    TARGET_EVENT_DEBUG_HALTED);
+		}
+	}
+	else
+	{
+		
+		/* If target was supposed to be stalled, stall it again */
+		if  (target->state == TARGET_HALTED)
+		{
+
+			target->state = TARGET_RUNNING;
+			
+			or1k_halt(target);
+		}
+		
+		/*
+		  target->state = TARGET_RUNNING;
+		*/
+	}
+
 
 	return ERROR_OK;
 }
@@ -666,15 +686,15 @@ COMMAND_HANDLER(or1k_readspr_command_handler)
 	uint32_t regnum, regval;
 	int retval;
 
-	switch (CMD_ARGC) {
-	case 0:
-		break;
-	case 1:
-		COMMAND_PARSE_NUMBER(u32, CMD_ARGV[0], regnum);
-		break;
-	default:
+	if (CMD_ARGC != 1)
 		return ERROR_COMMAND_SYNTAX_ERROR;
-	}
+
+	
+	//COMMAND_PARSE_NUMBER(u32, CMD_ARGV[0], regnum);
+
+	if (1 != sscanf(CMD_ARGV[0], "%4x", &regnum))
+		return ERROR_COMMAND_SYNTAX_ERROR;
+
 
 	LOG_DEBUG("adr 0x%08x",regnum);
 
@@ -686,7 +706,7 @@ COMMAND_HANDLER(or1k_readspr_command_handler)
 
 	/* TODO - update reg cache with this value*/
 	
-	LOG_INFO("SPR 0x%x: %08x", regnum, regval);
+	/*LOG_INFO("SPR 0x%x: %08x", regnum, regval);*/
 	
 
 	return ERROR_OK;

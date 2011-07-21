@@ -46,33 +46,32 @@ int or1k_jtag_init(struct or1k_jtag *jtag_info)
 	if (tap == NULL)
 		return ERROR_FAIL;
 
-	/* tap->ir_length should be set to 4 already, or we can hard code it */
-	if (buf_get_u32(tap->cur_instr, 0, tap->ir_length) != 
-	    (uint32_t)OR1K_TAP_INST_DEBUG) /* OpenCores Mohor JTAG TAP-specific */
-	{
-		struct scan_field field;
-		uint8_t t[4];
-		uint8_t ret[4];
-      
-		field.num_bits = tap->ir_length;
-		field.out_value = t;
-		/* OpenCores Mohor JTAG TAP-specific */
-		buf_set_u32(t, 0, field.num_bits, OR1K_TAP_INST_DEBUG);
-		field.in_value = ret;
 
-		/* Ensure TAP is reset - maybe not necessary*/
-		jtag_add_tlr();
+	struct scan_field field;
+	uint8_t t[4];
+	uint8_t ret[4];
       
-		jtag_add_ir_scan(tap, &field, TAP_IDLE);
-		if (jtag_execute_queue() != ERROR_OK)
-		{
-			LOG_ERROR(" setting TAP's IR to DEBUG failed");
-			return ERROR_FAIL;
-		}
+	field.num_bits = tap->ir_length;
+	field.out_value = t;
+	/* OpenCores Mohor JTAG TAP-specific */
+	buf_set_u32(t, 0, field.num_bits, OR1K_TAP_INST_DEBUG);
+	field.in_value = ret;
+
+	/* Ensure TAP is reset - maybe not necessary*/
+	jtag_add_tlr();
+      
+	jtag_add_ir_scan(tap, &field, TAP_IDLE);
+	if (jtag_execute_queue() != ERROR_OK)
+	{
+		LOG_ERROR(" setting TAP's IR to DEBUG failed");
+		return ERROR_FAIL;
 	}
 
-	/* Tap should now be configured to communicate with debug interface */
+	/* TAP should now be configured to communicate with debug interface */
 	or1k_jtag_inited = 1;
+	
+	/* TAP reset - not sure what state debug module chain is in now */
+	or1k_jtag_module_selected = -1;
 
 	return ERROR_OK;
 
@@ -674,8 +673,7 @@ int or1k_jtag_read_cpu(struct or1k_jtag *jtag_info,
 
 	if (or1k_jtag_module_selected != OR1K_MOHORDBGIF_MODULE_CPU0)
 		or1k_jtag_mohor_debug_select_module(jtag_info, 
-						    OR1K_MOHORDBGIF_MODULE_CPU0
-			);
+						    OR1K_MOHORDBGIF_MODULE_CPU0);
 
 	/* Set command register to read a single word */
 	if (or1k_jtag_mohor_debug_set_command(jtag_info, 
@@ -726,7 +724,8 @@ int or1k_jtag_read_cpu_cr(struct or1k_jtag *jtag_info,
 		or1k_jtag_init(jtag_info);
   
 	if (or1k_jtag_module_selected != OR1K_MOHORDBGIF_MODULE_CPU0)
-		or1k_jtag_mohor_debug_select_module(jtag_info, OR1K_MOHORDBGIF_MODULE_CPU0);
+		or1k_jtag_mohor_debug_select_module(jtag_info, 
+						    OR1K_MOHORDBGIF_MODULE_CPU0);
 
 	struct jtag_tap *tap;
   
