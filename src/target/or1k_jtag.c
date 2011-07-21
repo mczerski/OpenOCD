@@ -342,7 +342,7 @@ int or1k_jtag_mohor_debug_set_command(struct or1k_jtag *jtag_info,
 	}
 	else if ((in_status&0xff) == OR1K_MOHORDBGIF_CMD_OK)
 	{
-		LOG_DEBUG(" debug IF command write OK");
+		/*LOG_DEBUG(" debug IF command write OK");*/
 	}
 	else
 	{
@@ -456,7 +456,7 @@ int or1k_jtag_mohor_debug_read_go(struct or1k_jtag *jtag_info,
 	/* Calculate expected CRC for data and status */
 	expected_in_crc = 0xffffffff;
 
-	LOG_DEBUG("Debug GO Rx data:");
+	/*LOG_DEBUG("Debug GO Rx data:");*/
 
 	for(i=0;i<num_data_fields;i++)
 	{
@@ -469,7 +469,7 @@ int or1k_jtag_mohor_debug_read_go(struct or1k_jtag *jtag_info,
 								0x1));
 		
 		data[i] = flip_u32((uint32_t)data[i],8);
-		LOG_DEBUG("%02x",data[i]&0xff);
+		/*LOG_DEBUG("%02x",data[i]&0xff);*/
 	}
 
 	for(i=0;i<4;i++)
@@ -495,7 +495,7 @@ int or1k_jtag_mohor_debug_read_go(struct or1k_jtag *jtag_info,
 	}
 	else if ((in_status&0xff) == OR1K_MOHORDBGIF_CMD_OK)
 	{
-		LOG_DEBUG(" debug IF go command OK");
+		/*LOG_DEBUG(" debug IF go command OK");*/
 	}
 	else
 	{
@@ -536,7 +536,10 @@ int or1k_jtag_mohor_debug_write_go(struct or1k_jtag *jtag_info,
 	/* Figure out how many data fields we'll need. At present just do 1
 	   per byte, but in future, maybe figure out how we can do as many 
 	   32-bit fields as possible - might speed things up? */
-	int num_data_fields = length * type_size_bytes;
+	int length_bytes = length * type_size_bytes;
+	int num_data32_fields = length_bytes / 4;
+	int num_data8_fields = length_bytes % 4;
+	int num_data_fields = num_data32_fields + num_data8_fields;
 
 	struct scan_field *fields = malloc(sizeof(struct scan_field) *
 					   (num_data_fields + 5));	
@@ -558,12 +561,21 @@ int or1k_jtag_mohor_debug_write_go(struct or1k_jtag *jtag_info,
 	fields[1].out_value = (uint8_t*) &out_cmd;
 	fields[1].in_value = NULL;
 
-	for(i=0;i< num_data_fields;i++)
+	for(i=0;i< num_data32_fields;i++)
 	{
-		fields[2+i].num_bits= 8;
-		fields[2+i].out_value = &data[i];
+		fields[2+i].num_bits= 32;
+		fields[2+i].out_value = &data[i*4];
 		fields[2+i].in_value = NULL;
 	}
+
+	for(i=0;i< num_data8_fields;i++)
+	{
+		fields[2+num_data32_fields+i].num_bits= 8;
+		fields[2+num_data32_fields+i].out_value = 
+			&data[(num_data32_fields*4)+i];
+		fields[2+num_data32_fields+i].in_value = NULL;
+	}
+	
 
 	/* CRC calculations */
 	out_crc = 0xffffffff;
@@ -573,10 +585,12 @@ int or1k_jtag_mohor_debug_write_go(struct or1k_jtag *jtag_info,
 		out_crc = or1k_jtag_mohor_debug_crc_calc(out_crc, 
 							 ((out_cmd>>i)&0x1));
 
-	LOG_DEBUG("Debug GO Tx data:");
-	for(i=0;i<num_data_fields;i++)
+	/*LOG_DEBUG("Debug GO Tx data:");*/
+	for(i=0;i<length_bytes;i++)
 	{
+		/*LOG_DEBUG("%02x",data[i]&0xff);*/
 		/* Process received data byte at a time */
+		data[i] = flip_u32((uint32_t)data[i],8);
 		/* Calculate CRC and bit-reverse data */
 		for(j=0;j<8;j++)
 			out_crc = 
@@ -584,8 +598,8 @@ int or1k_jtag_mohor_debug_write_go(struct or1k_jtag *jtag_info,
 							       ((data[i]>>j)&
 								0x1));
 		
-		data[i] = flip_u32((uint32_t)data[i],8);
-		LOG_DEBUG("%02x",data[i]&0xff);
+		
+
 	}
 
 	/* CRC going out */
@@ -647,7 +661,7 @@ int or1k_jtag_mohor_debug_write_go(struct or1k_jtag *jtag_info,
 	}
 	else if ((in_status&0xff) == OR1K_MOHORDBGIF_CMD_OK)
 	{
-		LOG_DEBUG(" debug IF go command OK");
+		/*LOG_DEBUG(" debug IF go command OK");*/
 	}
 	else
 	{
@@ -659,8 +673,6 @@ int or1k_jtag_mohor_debug_write_go(struct or1k_jtag *jtag_info,
 	return ERROR_OK;
 
 }
-
-
 
 
 /* Currently hard set in functions to 32-bits */
@@ -688,10 +700,11 @@ int or1k_jtag_read_cpu(struct or1k_jtag *jtag_info,
 
 	return ERROR_OK;
 }
+
 int or1k_jtag_write_cpu(struct or1k_jtag *jtag_info,
 			uint32_t addr, uint32_t value)
 {
-	LOG_DEBUG(" writing CPU reg: 0x%x", value);
+	LOG_DEBUG(" writing CPU reg 0x%x = 0x%x", addr, value);
 
 	if (!or1k_jtag_inited)
 		or1k_jtag_init(jtag_info);
@@ -708,7 +721,9 @@ int or1k_jtag_write_cpu(struct or1k_jtag *jtag_info,
 					  4);
 
 	
-
+	if (or1k_jtag_mohor_debug_write_go(jtag_info, 4, 1,
+					   (uint8_t *)&value) != ERROR_OK)
+		return ERROR_FAIL;
 
 	return ERROR_OK;
 
@@ -1006,9 +1021,6 @@ int or1k_jtag_write_cpu_cr(struct or1k_jtag *jtag_info,
 	return ERROR_OK;
 }
 
-
-
-
 int or1k_jtag_read_memory32(struct or1k_jtag *jtag_info, 
 			    uint32_t addr, int count, uint32_t *buffer)
 {
@@ -1033,12 +1045,14 @@ int or1k_jtag_read_memory32(struct or1k_jtag *jtag_info,
 	return ERROR_OK;
 
 }
+
 int or1k_jtag_read_memory16(struct or1k_jtag *jtag_info, 
 			    uint32_t addr, int count, uint16_t *buffer)
 {
 	/* TODO - this function! */
 	return ERROR_OK;
 }
+
 int or1k_jtag_read_memory8(struct or1k_jtag *jtag_info, 
 			   uint32_t addr, int count, uint8_t *buffer)
 {
@@ -1071,65 +1085,65 @@ int or1k_jtag_write_memory32(struct or1k_jtag *jtag_info,
 	return ERROR_OK;
 
 }
+
 int or1k_jtag_write_memory16(struct or1k_jtag *jtag_info, 
 			     uint32_t addr, int count, const uint16_t *buffer)
 {
 	/* TODO - this function! */
 	return ERROR_OK;
 }
+
 int or1k_jtag_write_memory8(struct or1k_jtag *jtag_info, 
 			    uint32_t addr, int count, const uint8_t *buffer)
 {
-	/* TODO - this function! */
+	if (!or1k_jtag_inited)
+		or1k_jtag_init(jtag_info);
+
+	if (or1k_jtag_module_selected != OR1K_MOHORDBGIF_MODULE_WB)
+		or1k_jtag_mohor_debug_select_module(jtag_info, 
+						    OR1K_MOHORDBGIF_MODULE_WB);
+
+	/* Set command register to read a single word */
+	if (or1k_jtag_mohor_debug_set_command(jtag_info, 
+					      OR1K_MOHORDBGIF_WB_ACC_WRITE32,
+					      addr, count) != ERROR_OK)
+		return ERROR_FAIL;
+	
+	if (or1k_jtag_mohor_debug_write_go(jtag_info, 1, count,(uint8_t *)buffer)
+	    != ERROR_OK)
+		return ERROR_FAIL;
+	
 	return ERROR_OK;
 }
-
 
 int or1k_jtag_read_regs(struct or1k_jtag *jtag_info, uint32_t *regs)
 {
 	int i;
 
-	LOG_DEBUG("Enter");
+	LOG_DEBUG(" - ");
 
 	/* read core registers */
-	for (i = 0; i < OR1KNUMCOREREGS - 1; i++) 
+	for (i = 0; i < OR1KNUMCOREREGS ; i++)
+	{
 		or1k_jtag_read_cpu(jtag_info, 
 				   /* or1k spr address is in second field of
 				      or1k_core_reg_list_arch_info
 				   */
 				   or1k_core_reg_list_arch_info[i].spr_num,
 				   regs + i);
-
-	/* read status register */
-	/*
-	  retval = or1k_jtag_exec(jtag_info, MFSR(0, 0));
-	  if (retval != ERROR_OK)
-	  return retval;
-	*/
-	/*
-	  retval = or1k_jtag_read_reg(jtag_info, 0, regs + AVR32_REG_SR);
-
-	  return retval;
-	*/
+		/* Switch endianness of data just read */
+		h_u32_to_be((uint8_t*) &regs[i], regs[i]);
+	}
+	
 	return ERROR_OK;
 }
 
 int or1k_jtag_write_regs(struct or1k_jtag *jtag_info, uint32_t *regs)
 {
 	int i;
-	
-	/*
-	  retval = or1k_jtag_write_reg(jtag_info, 0, regs[OR1K_REG_SR]);
-	*/
-	/* Restore Status reg */
-        /*
-	  retval = or1k_jtag_exec(jtag_info, MTSR(0, 0));
-	  if (retval != ERROR_OK)
-	  return retval;
-	*/
-	/*
-	 * And now the rest of registers
-	 */
+
+	LOG_DEBUG(" - ");
+
 	for (i = 0; i < OR1KNUMCOREREGS - 1; i++) 
 		or1k_jtag_write_cpu(jtag_info, i, regs[i]);
 

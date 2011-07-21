@@ -30,6 +30,8 @@
 #include "or1k_jtag.h"
 #include "or1k.h"
 
+#include "server/server.h"
+#include "server/gdb_server.h"
 
 
 static char* or1k_core_reg_list[] =
@@ -87,6 +89,8 @@ static int or1k_write_core_reg(struct target *target, int num);
 
 int or1k_save_context(struct target *target)
 {
+
+	LOG_DEBUG(" - ");
 	int retval, i;
 	struct or1k_common *or1k = target_to_or1k(target);
 
@@ -108,6 +112,8 @@ int or1k_save_context(struct target *target)
 int or1k_restore_context(struct target *target)
 {
 	int i;
+
+	LOG_DEBUG(" - ");
 
 	/* get pointers to arch-specific information */
 	struct or1k_common *or1k = target_to_or1k(target);
@@ -138,6 +144,7 @@ static int or1k_read_core_reg(struct target *target, int num)
 
 	reg_value = or1k->core_regs[num];
 	buf_set_u32(or1k->core_cache->reg_list[num].value, 0, 32, reg_value);
+	LOG_DEBUG("read core reg %i value 0x%" PRIx32 "", num , reg_value);
 	or1k->core_cache->reg_list[num].valid = 1;
 	or1k->core_cache->reg_list[num].dirty = 0;
 
@@ -348,6 +355,12 @@ static int or1k_poll(struct target *target)
 			target->state = TARGET_RUNNING;
 			
 			or1k_halt(target);
+
+			if ((retval = or1k_debug_entry(target)) != ERROR_OK)
+				return retval;
+
+			target_call_event_callbacks(target, 
+						    TARGET_EVENT_DEBUG_HALTED);
 		}
 		
 		/*
@@ -643,7 +656,39 @@ static int or1k_examine(struct target *target)
 static int or1k_bulk_write_memory(struct target *target, uint32_t address,
 		uint32_t count, const uint8_t *buffer)
 {
-	LOG_ERROR("%s: implement me", __func__);
+	struct or1k_common *or1k = target_to_or1k(target);
+	
+	LOG_DEBUG("address 0x%x count %d", address, count);
+
+	/* Break it up into 256 byte blocks */
+
+	uint32_t block_count_left = count & ~0x3;
+	uint32_t block_count_address = address;
+	uint8_t *block_count_buffer = (uint8_t*) buffer;
+
+        uint32_t remain = count % 256;
+	
+	while (block_count_left > (64*4))
+	{
+		or1k_jtag_write_memory32(&or1k->jtag, 
+					 block_count_address , 64,
+					 (uint32_t*)block_count_buffer);
+
+		block_count_left -= (64*4);
+		block_count_address += (64*4);
+		block_count_buffer += (64*4);
+	}
+
+	if (remain)
+	{
+		
+		address += (count - remain);
+		buffer += (count - remain);
+		LOG_DEBUG("remaining %d bytes from address 0x%x",
+			  remain, block_count_address);
+		or1k_jtag_write_memory8(&or1k->jtag, block_count_address, 
+					remain, (uint8_t *)block_count_buffer);
+	}
 
 	return ERROR_OK;
 }
@@ -666,25 +711,31 @@ int or1k_get_gdb_reg_list(struct target *target, struct reg **reg_list[],
 {
 	struct or1k_common *or1k = target_to_or1k(target);
 	int i;
+
+	/* We will have this called whenever GDB connects. */
+	or1k_save_context(target);
 	
 	*reg_list_size = OR1KNUMCOREREGS;
 	*reg_list = malloc(sizeof(struct reg*) * (*reg_list_size));
 
 	for (i = 0; i < OR1KNUMCOREREGS; i++)
-		(*reg_list)[i] = &or1k->core_cache->reg_list[i] 
-			/*+ arm->map[regnum];*/;
+		(*reg_list)[i] = &or1k->core_cache->reg_list[i];
 
 	return ERROR_OK;
 
 }
 
+/* defined in server/gdb_server.h" */
+extern struct connection *current_rsp_connection;
+extern int gdb_rsp_resp_error;
+#define ERROR_OK_NO_GDB_REPLY (-42)
 
 COMMAND_HANDLER(or1k_readspr_command_handler)
 {
 	struct target *target = get_current_target(CMD_CTX);
 	struct or1k_common *or1k = target_to_or1k(target);
 	uint32_t regnum, regval;
-	int retval;
+	int retval, i;
 
 	if (CMD_ARGC != 1)
 		return ERROR_COMMAND_SYNTAX_ERROR;
@@ -692,11 +743,10 @@ COMMAND_HANDLER(or1k_readspr_command_handler)
 	
 	//COMMAND_PARSE_NUMBER(u32, CMD_ARGV[0], regnum);
 
-	if (1 != sscanf(CMD_ARGV[0], "%4x", &regnum))
+	if (1 != sscanf(CMD_ARGV[0], "%8x", &regnum))
 		return ERROR_COMMAND_SYNTAX_ERROR;
 
-
-	LOG_DEBUG("adr 0x%08x",regnum);
+	//LOG_DEBUG("adr 0x%08x",regnum);
 
 	/* Now get the register value via JTAG */
 	retval = or1k_jtag_read_cpu(&or1k->jtag, regnum, &regval);
@@ -704,10 +754,61 @@ COMMAND_HANDLER(or1k_readspr_command_handler)
 	if (retval != ERROR_OK)
 		return retval;
 
+	/* Switch endianness of data just read */
+	h_u32_to_be((uint8_t*) &regval, regval);
+	
 	/* TODO - update reg cache with this value*/
 	
-	/*LOG_INFO("SPR 0x%x: %08x", regnum, regval);*/
 	
+	if (current_rsp_connection != NULL)
+	{
+		char gdb_reply[9];
+		sprintf(gdb_reply, "%8x", (unsigned int) regval);
+		gdb_reply[8] = 0x0;
+		
+		//LOG_INFO("%s",gdb_reply);
+
+		char *hex_buffer;
+		int bin_size;
+		
+		bin_size = strlen(gdb_reply);
+		
+		hex_buffer = malloc(bin_size*2 + 1);
+		if (hex_buffer == NULL)
+			return ERROR_GDB_BUFFER_TOO_SMALL;
+		
+		for (i = 0; i < bin_size; i++)
+			snprintf(hex_buffer + i*2, 3, "%2.2x", gdb_reply[i]);
+		hex_buffer[bin_size*2] = 0;
+		
+		gdb_put_packet(current_rsp_connection, hex_buffer, 
+			       bin_size*2);
+		
+		free(hex_buffer);
+		
+		gdb_rsp_resp_error = ERROR_OK_NO_GDB_REPLY;
+	} 
+
+
+
+	struct or1k_core_reg *arch_info;
+	for(i = 0; i < OR1KNUMCOREREGS; i++)
+	{
+		arch_info = (struct or1k_core_reg *)
+			or1k->core_cache->reg_list[i].arch_info;
+		if (arch_info->spr_num == regnum)
+			break;
+	}
+
+	
+	if (i < OR1KNUMCOREREGS)
+	{
+		/* Set the value in the core reg array */
+		or1k->core_regs[i] = regval;
+		/* Update the register struct's value from the core array */
+		or1k_read_core_reg(target, i);
+	}
+
 
 	return ERROR_OK;
 }
@@ -719,22 +820,45 @@ COMMAND_HANDLER(or1k_writespr_command_handler)
 	uint32_t regnum, regval;
 	int retval;
 
-	switch (CMD_ARGC) {
-	case 2:
-		COMMAND_PARSE_NUMBER(u32, CMD_ARGV[0], regnum);
-		COMMAND_PARSE_NUMBER(u32, CMD_ARGV[1], regval);
-		break;
-	default:
+	if (CMD_ARGC != 2)
 		return ERROR_COMMAND_SYNTAX_ERROR;
-	}
+
+	if (1 != sscanf(CMD_ARGV[0], "%8x", &regnum))
+		return ERROR_COMMAND_SYNTAX_ERROR;
+	
+	if (1 != sscanf(CMD_ARGV[1], "%8x", &regval))
+		return ERROR_COMMAND_SYNTAX_ERROR;
 
 	LOG_DEBUG("adr 0x%08x val 0x%08x",regnum, regval);
 
-	/* Now get the register value via JTAG */
+	/* Switch endianness of data just read */
+	h_u32_to_be((uint8_t*) &regval, regval);
+
+	/* Now set the register via JTAG */
 	retval = or1k_jtag_write_cpu(&or1k->jtag, regnum, regval);
 
 	if (retval != ERROR_OK)
 		return retval;
+
+	/* See if this reg is part of the core cache, if so update it */
+	int i;
+	struct or1k_core_reg *arch_info;
+	for(i = 0; i < OR1KNUMCOREREGS; i++)
+	{
+		arch_info = (struct or1k_core_reg *)
+			or1k->core_cache->reg_list[i].arch_info;
+		if (arch_info->spr_num == regnum)
+			break;
+	}
+
+	
+	if (i < OR1KNUMCOREREGS)
+	{
+		/* Set the value in the core reg array */
+		or1k->core_regs[i] = regval;
+		/* Update the register struct's value from the core array */
+		or1k_read_core_reg(target, i);
+	}
 
 
 	return ERROR_OK;
