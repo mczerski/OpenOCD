@@ -564,6 +564,7 @@ static int or1k_write_memory(struct target *target, uint32_t address,
 	return ERROR_OK;
 }
 
+
 static int or1k_init_target(struct command_context *cmd_ctx,
 		struct target *target)
 {
@@ -658,6 +659,96 @@ int or1k_get_gdb_reg_list(struct target *target, struct reg **reg_list[],
 }
 
 
+COMMAND_HANDLER(or1k_readspr_command_handler)
+{
+	struct target *target = get_current_target(CMD_CTX);
+	struct or1k_common *or1k = target_to_or1k(target);
+	uint32_t regnum, regval;
+	int retval;
+
+	switch (CMD_ARGC) {
+	case 0:
+		break;
+	case 1:
+		COMMAND_PARSE_NUMBER(u32, CMD_ARGV[0], regnum);
+		break;
+	default:
+		return ERROR_COMMAND_SYNTAX_ERROR;
+	}
+
+	LOG_DEBUG("adr 0x%08x",regnum);
+
+	/* Now get the register value via JTAG */
+	retval = or1k_jtag_read_cpu(&or1k->jtag, regnum, &regval);
+
+	if (retval != ERROR_OK)
+		return retval;
+
+	/* TODO - update reg cache with this value*/
+	
+	LOG_INFO("SPR 0x%x: %08x", regnum, regval);
+	
+
+	return ERROR_OK;
+}
+
+COMMAND_HANDLER(or1k_writespr_command_handler)
+{
+	struct target *target = get_current_target(CMD_CTX);
+	struct or1k_common *or1k = target_to_or1k(target);
+	uint32_t regnum, regval;
+	int retval;
+
+	switch (CMD_ARGC) {
+	case 2:
+		COMMAND_PARSE_NUMBER(u32, CMD_ARGV[0], regnum);
+		COMMAND_PARSE_NUMBER(u32, CMD_ARGV[1], regval);
+		break;
+	default:
+		return ERROR_COMMAND_SYNTAX_ERROR;
+	}
+
+	LOG_DEBUG("adr 0x%08x val 0x%08x",regnum, regval);
+
+	/* Now get the register value via JTAG */
+	retval = or1k_jtag_write_cpu(&or1k->jtag, regnum, regval);
+
+	if (retval != ERROR_OK)
+		return retval;
+
+
+	return ERROR_OK;
+}
+
+
+
+
+static const struct command_registration or1k_spr_command_handlers[] = {
+	{
+		"readspr",
+		.handler = or1k_readspr_command_handler,
+		.mode = COMMAND_ANY,
+		.usage = "sprnum",
+		.help = "read OR1k special purpose register sprnum",
+	},
+	{
+		"writespr",
+		.handler = or1k_writespr_command_handler,
+		.mode = COMMAND_ANY,
+		.usage = "sprnum value",
+		.help = "write value to OR1k special purpose register sprnum",
+	},
+	COMMAND_REGISTRATION_DONE
+};
+
+const struct command_registration or1k_command_handlers[] = {
+	{
+		.chain = or1k_spr_command_handlers,
+	},
+	COMMAND_REGISTRATION_DONE
+};
+
+
 struct target_type or1k_target =
 {
 	.name = "or1k",
@@ -685,6 +776,7 @@ struct target_type or1k_target =
 
 	// .run_algorithm = or1k_run_algorithm,
 
+	.commands = or1k_command_handlers,
 	.add_breakpoint = or1k_add_breakpoint,
 	.remove_breakpoint = or1k_remove_breakpoint,
 	.add_watchpoint = or1k_add_watchpoint,
