@@ -758,6 +758,7 @@ COMMAND_HANDLER(or1k_readspr_command_handler)
 	struct or1k_common *or1k = target_to_or1k(target);
 	uint32_t regnum, regval;
 	int retval, i;
+	int reg_index = -1;
 
 	if (CMD_ARGC != 1)
 		return ERROR_COMMAND_SYNTAX_ERROR;
@@ -770,16 +771,43 @@ COMMAND_HANDLER(or1k_readspr_command_handler)
 
 	//LOG_DEBUG("adr 0x%08x",regnum);
 
-	/* Now get the register value via JTAG */
-	retval = or1k_jtag_read_cpu(&or1k->jtag, regnum, &regval);
 
-	if (retval != ERROR_OK)
-		return retval;
-
-	/* Switch endianness of data just read */
-	h_u32_to_be((uint8_t*) &regval, regval);
+	/* See if this register is in our cache and valid */
 	
-	/* TODO - update reg cache with this value*/
+	struct or1k_core_reg *arch_info;
+	for(i = 0; i < OR1KNUMCOREREGS; i++)
+	{
+		arch_info = (struct or1k_core_reg *)
+			or1k->core_cache->reg_list[i].arch_info;
+		if (arch_info->spr_num == regnum)
+		{
+			/* Reg is part of our cache. */
+			reg_index = i;
+			/* Is the local copy currently valid ? */
+			if (or1k->core_cache->reg_list[i].valid == 1)
+			{	
+				regval = buf_get_u32(or1k->core_cache->reg_list[i].value,
+						     0, 32);
+			}
+			
+			break;
+		}
+	}
+
+	/* Reg was not found in cache, or it was and the value wasn't valid. */
+	if (reg_index == -1 ||
+	    (reg_index != -1 && !(or1k->core_cache->reg_list[reg_index].valid ==
+				  1)))
+	{
+		/* Now get the register value via JTAG */
+		retval = or1k_jtag_read_cpu(&or1k->jtag, regnum, &regval);
+		
+		if (retval != ERROR_OK)
+			return retval;
+		
+		/* Switch endianness of data just read */
+		h_u32_to_be((uint8_t*) &regval, regval);
+	}
 	
 	
 	if (current_rsp_connection != NULL)
@@ -813,23 +841,14 @@ COMMAND_HANDLER(or1k_readspr_command_handler)
 
 
 
-	struct or1k_core_reg *arch_info;
-	for(i = 0; i < OR1KNUMCOREREGS; i++)
-	{
-		arch_info = (struct or1k_core_reg *)
-			or1k->core_cache->reg_list[i].arch_info;
-		if (arch_info->spr_num == regnum)
-			break;
-	}
-
-	
-	if (i < OR1KNUMCOREREGS)
+	/* Reg part of local core cache, but not valid, so update it */
+	if (reg_index != -1 && !(or1k->core_cache->reg_list[reg_index].valid==1))
 	{
 		/* Set the value in the core reg array */
-		or1k->core_regs[i] = regval;
+		or1k->core_regs[reg_index] = regval;
 		/* Always update the register struct's value from the core 
 		   array */
-		or1k_read_core_reg(target, i);
+		or1k_read_core_reg(target, reg_index);
 	}
 
 
