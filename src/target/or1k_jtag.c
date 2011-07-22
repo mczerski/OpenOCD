@@ -469,7 +469,7 @@ int or1k_jtag_mohor_debug_read_go(struct or1k_jtag *jtag_info,
 								0x1));
 		
 		data[i] = flip_u32((uint32_t)data[i],8);
-		/*LOG_DEBUG("%02x",data[i]&0xff);*/
+		LOG_DEBUG("%02x",data[i]&0xff);
 	}
 
 	for(i=0;i<4;i++)
@@ -588,7 +588,7 @@ int or1k_jtag_mohor_debug_write_go(struct or1k_jtag *jtag_info,
 	/*LOG_DEBUG("Debug GO Tx data:");*/
 	for(i=0;i<length_bytes;i++)
 	{
-		/*LOG_DEBUG("%02x",data[i]&0xff);*/
+		LOG_DEBUG("%02x",data[i]&0xff);
 		/* Process received data byte at a time */
 		data[i] = flip_u32((uint32_t)data[i],8);
 		/* Calculate CRC and bit-reverse data */
@@ -1056,7 +1056,24 @@ int or1k_jtag_read_memory16(struct or1k_jtag *jtag_info,
 int or1k_jtag_read_memory8(struct or1k_jtag *jtag_info, 
 			   uint32_t addr, int count, uint8_t *buffer)
 {
-	/* TODO - this function! */
+	if (!or1k_jtag_inited)
+		or1k_jtag_init(jtag_info);
+
+	if (or1k_jtag_module_selected != OR1K_MOHORDBGIF_MODULE_WB)
+		or1k_jtag_mohor_debug_select_module(jtag_info, 
+						    OR1K_MOHORDBGIF_MODULE_WB);
+
+	/* Set command register to read a single word */
+	if (or1k_jtag_mohor_debug_set_command(jtag_info, 
+					      OR1K_MOHORDBGIF_WB_ACC_READ32,
+					      addr,
+					      count) != ERROR_OK)
+		return ERROR_FAIL;
+
+	if (or1k_jtag_mohor_debug_read_go(jtag_info, 1, count,(uint8_t *)buffer)
+	    != ERROR_OK)
+		return ERROR_FAIL;
+
 	return ERROR_OK;
 }
 
@@ -1133,6 +1150,7 @@ int or1k_jtag_read_regs(struct or1k_jtag *jtag_info, uint32_t *regs)
 				   regs + i);
 		/* Switch endianness of data just read */
 		h_u32_to_be((uint8_t*) &regs[i], regs[i]);
+		LOG_DEBUG("read reg %d: 0x%08x",i,regs[i]);
 	}
 	
 	return ERROR_OK;

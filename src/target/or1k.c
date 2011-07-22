@@ -94,14 +94,32 @@ int or1k_save_context(struct target *target)
 	int retval, i;
 	struct or1k_common *or1k = target_to_or1k(target);
 
+	/*
 	retval = or1k_jtag_read_regs(&or1k->jtag, or1k->core_regs);
 	if (retval != ERROR_OK)
 		return retval;
-
+	*/
+	
 	for (i = 0; i < OR1KNUMCOREREGS; i++)
 	{
 		if (!or1k->core_cache->reg_list[i].valid)
 		{
+			retval = or1k_jtag_read_cpu(&or1k->jtag, 
+				   /* or1k spr address is in second field of
+				      or1k_core_reg_list_arch_info
+				   */
+				   or1k_core_reg_list_arch_info[i].spr_num,
+				   &or1k->core_regs[i]);
+			/* Switch endianness of data just read */
+			h_u32_to_be((uint8_t*) &or1k->core_regs[i], 
+				    or1k->core_regs[i]);
+			
+
+			if (retval != ERROR_OK)
+				return retval;
+			
+			/* We've just updated the core_reg[i], now update
+			   the core cache */
 			or1k_read_core_reg(target, i);
 		}
 	}
@@ -250,6 +268,8 @@ static int or1k_debug_entry(struct target *target)
 {
 
   	/* Perhaps do more debugging entry (processor stalled) set up here */
+
+	LOG_DEBUG(" - ");
 
 	or1k_save_context(target);
 
@@ -429,7 +449,7 @@ static int or1k_resume(struct target *target, int current,
 	 * register cache and continue - Julius
 	 */
 	resume_pc = 
-		buf_get_u32(or1k->core_cache->reg_list[OR1K_REG_PPC].value, 
+		buf_get_u32(or1k->core_cache->reg_list[OR1K_REG_NPC].value, 
 			    0, 32);
 	or1k_restore_context(target);
 
@@ -712,6 +732,8 @@ int or1k_get_gdb_reg_list(struct target *target, struct reg **reg_list[],
 	struct or1k_common *or1k = target_to_or1k(target);
 	int i;
 
+	LOG_DEBUG(" - ");
+
 	/* We will have this called whenever GDB connects. */
 	or1k_save_context(target);
 	
@@ -805,7 +827,8 @@ COMMAND_HANDLER(or1k_readspr_command_handler)
 	{
 		/* Set the value in the core reg array */
 		or1k->core_regs[i] = regval;
-		/* Update the register struct's value from the core array */
+		/* Always update the register struct's value from the core 
+		   array */
 		or1k_read_core_reg(target, i);
 	}
 
@@ -817,7 +840,7 @@ COMMAND_HANDLER(or1k_writespr_command_handler)
 {
 	struct target *target = get_current_target(CMD_CTX);
 	struct or1k_common *or1k = target_to_or1k(target);
-	uint32_t regnum, regval;
+	uint32_t regnum, regval, regval_be;
 	int retval;
 
 	if (CMD_ARGC != 2)
@@ -832,13 +855,37 @@ COMMAND_HANDLER(or1k_writespr_command_handler)
 	LOG_DEBUG("adr 0x%08x val 0x%08x",regnum, regval);
 
 	/* Switch endianness of data just read */
-	h_u32_to_be((uint8_t*) &regval, regval);
+	h_u32_to_be((uint8_t*) &regval_be, regval);
+#if 0
+	uint32_t verify_regval;
+
+	while(1){
 
 	/* Now set the register via JTAG */
-	retval = or1k_jtag_write_cpu(&or1k->jtag, regnum, regval);
+	retval = or1k_jtag_write_cpu(&or1k->jtag, regnum, regval_be);
 
 	if (retval != ERROR_OK)
 		return retval;
+
+	/* Now read back the register via JTAG */
+	retval = or1k_jtag_read_cpu(&or1k->jtag, regnum, &verify_regval);
+
+	if (retval != ERROR_OK)
+		return retval;
+
+	LOG_DEBUG("written: %08x read: %08x",regval_be, verify_regval);
+	
+	if (regval_be == verify_regval)
+		break;
+	}
+
+#else
+	/* Now set the register via JTAG */
+	retval = or1k_jtag_write_cpu(&or1k->jtag, regnum, regval_be);
+	
+	if (retval != ERROR_OK)
+		return retval;
+#endif	
 
 	/* See if this reg is part of the core cache, if so update it */
 	int i;
