@@ -1150,7 +1150,7 @@ int or1k_jtag_read_regs(struct or1k_jtag *jtag_info, uint32_t *regs)
 				   regs + i);
 		/* Switch endianness of data just read */
 		h_u32_to_be((uint8_t*) &regs[i], regs[i]);
-		LOG_DEBUG("read reg %d: 0x%08x",i,regs[i]);
+		LOG_DEBUG("read cache reg %d: 0x%08x",i,regs[i]);
 	}
 	
 	return ERROR_OK;
@@ -1159,11 +1159,22 @@ int or1k_jtag_read_regs(struct or1k_jtag *jtag_info, uint32_t *regs)
 int or1k_jtag_write_regs(struct or1k_jtag *jtag_info, uint32_t *regs)
 {
 	int i;
-
+	uint32_t regval_be;
+	
 	LOG_DEBUG(" - ");
 
-	for (i = 0; i < OR1KNUMCOREREGS - 1; i++) 
-		or1k_jtag_write_cpu(jtag_info, i, regs[i]);
+	for (i = 0; i < OR1KNUMCOREREGS; i++) 
+	{
+		LOG_DEBUG("write cache reg %d: 0x%08x",i,regs[i]);
+		/* Switch endianness of data before we write */
+		h_u32_to_be((uint8_t*) &regval_be, regs[i]);
+		or1k_jtag_write_cpu(jtag_info, 
+				    /* or1k spr address is in second field of
+				       or1k_core_reg_list_arch_info
+				    */
+				    or1k_core_reg_list_arch_info[i].spr_num,
+				    regval_be);
+	}
 
 	return ERROR_OK;
 }
