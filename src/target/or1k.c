@@ -758,7 +758,7 @@ COMMAND_HANDLER(or1k_readspr_command_handler)
 	struct or1k_common *or1k = target_to_or1k(target);
 	uint32_t regnum, regval;
 	int retval, i;
-	int reg_index = -1;
+	int reg_cache_index = -1;
 
 	if (CMD_ARGC != 1)
 		return ERROR_COMMAND_SYNTAX_ERROR;
@@ -782,12 +782,14 @@ COMMAND_HANDLER(or1k_readspr_command_handler)
 		if (arch_info->spr_num == regnum)
 		{
 			/* Reg is part of our cache. */
-			reg_index = i;
+			reg_cache_index = i;
 			/* Is the local copy currently valid ? */
 			if (or1k->core_cache->reg_list[i].valid == 1)
 			{	
 				regval = buf_get_u32(or1k->core_cache->reg_list[i].value,
 						     0, 32);
+
+				LOG_DEBUG("reading cached value");
 			}
 			
 			break;
@@ -795,9 +797,9 @@ COMMAND_HANDLER(or1k_readspr_command_handler)
 	}
 
 	/* Reg was not found in cache, or it was and the value wasn't valid. */
-	if (reg_index == -1 ||
-	    (reg_index != -1 && !(or1k->core_cache->reg_list[reg_index].valid ==
-				  1)))
+	if (reg_cache_index == -1 ||
+	    (reg_cache_index != -1 && 
+	     !(or1k->core_cache->reg_list[reg_cache_index].valid == 1)))
 	{
 		/* Now get the register value via JTAG */
 		retval = or1k_jtag_read_cpu(&or1k->jtag, regnum, &regval);
@@ -842,13 +844,14 @@ COMMAND_HANDLER(or1k_readspr_command_handler)
 
 
 	/* Reg part of local core cache, but not valid, so update it */
-	if (reg_index != -1 && !(or1k->core_cache->reg_list[reg_index].valid==1))
+	if (reg_cache_index != -1 && 
+	    !(or1k->core_cache->reg_list[reg_cache_index].valid==1))
 	{
 		/* Set the value in the core reg array */
-		or1k->core_regs[reg_index] = regval;
+		or1k->core_regs[reg_cache_index] = regval;
 		/* Always update the register struct's value from the core 
 		   array */
-		or1k_read_core_reg(target, reg_index);
+		or1k_read_core_reg(target, reg_cache_index);
 	}
 
 
@@ -861,6 +864,8 @@ COMMAND_HANDLER(or1k_writespr_command_handler)
 	struct or1k_common *or1k = target_to_or1k(target);
 	uint32_t regnum, regval, regval_be;
 	int retval;
+	int reg_cache_index = -1;
+	int i;
 
 	if (CMD_ARGC != 2)
 		return ERROR_COMMAND_SYNTAX_ERROR;
@@ -873,10 +878,34 @@ COMMAND_HANDLER(or1k_writespr_command_handler)
 
 	LOG_DEBUG("adr 0x%08x val 0x%08x",regnum, regval);
 
-	/* Switch endianness of data just read */
-	h_u32_to_be((uint8_t*) &regval_be, regval);
+	/* Determine if this SPR is part of our cache */
+	struct or1k_core_reg *arch_info;
+	for(i = 0; i < OR1KNUMCOREREGS; i++)
+	{
+		arch_info = (struct or1k_core_reg *)
+			or1k->core_cache->reg_list[i].arch_info;
+		if (arch_info->spr_num == regnum)
+		{
+			/* Reg is part of our cache. */
+			reg_cache_index = i;
+
+			or1k->core_cache->reg_list[i].valid = 1;
+			or1k->core_cache->reg_list[i].dirty = 1;
+			buf_set_u32(or1k->core_cache->reg_list[i].value, 0, 32,
+				    regval);
+
+			LOG_DEBUG("caching written value");
+
+			return ERROR_OK;
+		}
+	}
+
+	
 #if 0
 	uint32_t verify_regval;
+
+	/* Switch endianness of data just read */
+	h_u32_to_be((uint8_t*) &regval_be, regval);
 
 	while(1){
 
@@ -899,33 +928,16 @@ COMMAND_HANDLER(or1k_writespr_command_handler)
 	}
 
 #else
+
+	/* Switch endianness of data just read */
+	h_u32_to_be((uint8_t*) &regval_be, regval);
+
 	/* Now set the register via JTAG */
 	retval = or1k_jtag_write_cpu(&or1k->jtag, regnum, regval_be);
 	
 	if (retval != ERROR_OK)
 		return retval;
 #endif	
-
-	/* See if this reg is part of the core cache, if so update it */
-	int i;
-	struct or1k_core_reg *arch_info;
-	for(i = 0; i < OR1KNUMCOREREGS; i++)
-	{
-		arch_info = (struct or1k_core_reg *)
-			or1k->core_cache->reg_list[i].arch_info;
-		if (arch_info->spr_num == regnum)
-			break;
-	}
-
-	
-	if (i < OR1KNUMCOREREGS)
-	{
-		/* Set the value in the core reg array */
-		or1k->core_regs[i] = regval;
-		/* Update the register struct's value from the core array */
-		or1k_read_core_reg(target, i);
-	}
-
 
 	return ERROR_OK;
 }
