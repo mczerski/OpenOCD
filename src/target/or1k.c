@@ -33,7 +33,6 @@
 #include "server/server.h"
 #include "server/gdb_server.h"
 
-
 static char* or1k_core_reg_list[] =
 {
 	"r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7", "r8", 
@@ -418,7 +417,7 @@ static int or1k_resume(struct target *target, int current,
 {
 	struct or1k_common *or1k = target_to_or1k(target);
 	struct breakpoint *breakpoint = NULL;
-	uint32_t resume_pc;
+	uint32_t resume_pc, resume_pc_be;
 	int retval;
 
 	if (target->state != TARGET_HALTED)
@@ -453,6 +452,50 @@ static int or1k_resume(struct target *target, int current,
 			    0, 32);
 	or1k_restore_context(target);
 
+	h_u32_to_be((uint8_t*) &resume_pc_be, resume_pc);
+
+	/* Last, write the NPC, again */
+	or1k_jtag_write_cpu(&or1k->jtag,
+			    /* NPC's address */
+			    or1k_core_reg_list_arch_info[OR1K_REG_NPC].spr_num, 
+			    /* What it should be set to */
+			    resume_pc_be);
+
+	/* Debug unwinding stuff */
+#define DMR1_CPU_REG_ADD ((6<<11)+16)/* Debug Mode Register 1 (DMR1) 0x3010 */
+#define DMR2_CPU_REG_ADD ((6<<11)+17)/* Debug Mode Register 2 (DMR2) 0x3011 */
+#define DSR_CPU_REG_ADD	 ((6<<11)+20)/* Debug Stop Register (DSR) 0x3014 */
+#define DRR_CPU_REG_ADD  ((6<<11)+21)/* Debug Reason Register (DRR) 0x3015 */
+#define SPR_DMR1_ST 	0x00400000	/* Single-step trace */
+#define SPR_DMR2_WGB   	0x003ff000	/* Watchpoints generating breakpoint */
+#define SPR_DSR_TE	0x00002000	/* Trap exception */
+
+	uint32_t regval;
+	regval = 0;
+	/* Clear Debug Reason Register (DRR) */
+	or1k_jtag_write_cpu(&or1k->jtag,DRR_CPU_REG_ADD, regval);
+	/* Clear watchpoint break generation in Debug Mode Register 2 (DMR2) */
+	or1k_jtag_read_cpu(&or1k->jtag, DMR2_CPU_REG_ADD, &regval);
+	h_u32_to_be((uint8_t*) &regval, regval);
+	regval &= ~SPR_DMR2_WGB;
+	h_u32_to_be((uint8_t*) &regval, regval);
+	or1k_jtag_write_cpu(&or1k->jtag, DMR2_CPU_REG_ADD, regval);
+	/* Clear the single step trigger in Debug Mode Register 1 (DMR1) */
+	or1k_jtag_read_cpu(&or1k->jtag, DMR1_CPU_REG_ADD, &regval);
+	h_u32_to_be((uint8_t*) &regval, regval);
+	//regval &= ~SPR_DMR1_ST;
+	regval |= SPR_DMR1_ST;
+	h_u32_to_be((uint8_t*) &regval, regval);
+	or1k_jtag_write_cpu(&or1k->jtag, DMR1_CPU_REG_ADD, regval);
+	/* Set traps to be handled by the debug unit in the Debug Stop 
+	   Register (DSR) */
+	or1k_jtag_read_cpu(&or1k->jtag, DSR_CPU_REG_ADD, &regval);
+	h_u32_to_be((uint8_t*) &regval, regval);
+	regval |= SPR_DSR_TE;
+	h_u32_to_be((uint8_t*) &regval, regval);
+	or1k_jtag_write_cpu(&or1k->jtag, DSR_CPU_REG_ADD, regval);
+	 
+
 	/* the front-end may request us not to handle breakpoints */
 	if (handle_breakpoints)
 	{
@@ -461,20 +504,12 @@ static int or1k_resume(struct target *target, int current,
 		{
 			LOG_DEBUG("unset breakpoint at 0x%8.8" PRIx32 "", breakpoint->address);
 #if 0
-			avr32_ap7k_unset_breakpoint(target, breakpoint);
-			avr32_ap7k_single_step_core(target);
-			avr32_ap7k_set_breakpoint(target, breakpoint);
+			/* Do appropriate things here to remove breakpoint. */
 #endif
 		}
 	}
+	/* Unstall time */
 
-	/* I presume this is unstall - Julius
-	 */
-	/*
-	retval = avr32_ocd_clearbits(&ap7k->jtag, AVR32_OCDREG_DC,
-			OCDREG_DC_DBR);
-	*/
-	
 	/* Mohor debug if, clearing control register unstalls */
 	retval = or1k_jtag_write_cpu_cr(&or1k->jtag, 0, 0);
 	if (retval != ERROR_OK)
@@ -555,25 +590,69 @@ static int or1k_read_memory(struct target *target, uint32_t address,
 	}
 
 	/* sanitize arguments */
-	if (((size != 4) && (size != 2) && (size != 1)) || (count == 0) || !(buffer))
+	if (((size != 4) && (size != 2) && (size != 1)) || (count == 0) || 
+	    !(buffer))
 		return ERROR_INVALID_ARGUMENTS;
 
-	if (((size == 4) && (address & 0x3u)) || ((size == 2) && (address & 0x1u)))
+	if (((size == 4) && (address & 0x3u)) || ((size == 2) && 
+						  (address & 0x1u)))
 		return ERROR_TARGET_UNALIGNED_ACCESS;
-
-	switch (size)
+	
+	
+	if (size == 4 && count > 63)
 	{
-	case 4:
-		return or1k_jtag_read_memory32(&or1k->jtag, address, count, (uint32_t*)(void *)buffer);
-		break;
-	case 2:
-		return or1k_jtag_read_memory16(&or1k->jtag, address, count, (uint16_t*)(void *)buffer);
-		break;
-	case 1:
-		return or1k_jtag_read_memory8(&or1k->jtag, address, count, buffer);
-		break;
-	default:
-		break;
+		/* Break reads up into 256 byte blocks */
+		uint32_t block_count_left = count & ~0x3;
+		uint32_t block_count_address = address;
+		uint8_t *block_count_buffer = (uint8_t*) buffer;
+		
+		uint32_t remain = count % 256;
+
+		while (block_count_left > (64*4))
+		{
+			or1k_jtag_read_memory32(&or1k->jtag, 
+						block_count_address , 64,
+						(uint32_t*)block_count_buffer);
+			
+			block_count_left -= (64*4);
+			block_count_address += (64*4);
+			block_count_buffer += (64*4);
+		}
+		if (remain)
+		{
+			
+			address += (count - remain);
+			buffer += (count - remain);
+			LOG_DEBUG("read remaining %d bytes from address 0x%x",
+				  remain, block_count_address);
+			or1k_jtag_read_memory8(&or1k->jtag, block_count_address,
+					       remain, 
+					       (uint8_t *)block_count_buffer);
+		}
+	} 
+	else
+	{
+	
+		switch (size)
+		{
+		case 4:
+			return or1k_jtag_read_memory32(&or1k->jtag, address, 
+						       count, 
+						       (uint32_t*)(void *)buffer);
+			break;
+		case 2:
+			return or1k_jtag_read_memory16(&or1k->jtag, address, 
+						       count, 
+						       (uint16_t*)(void *)buffer);
+			break;
+		case 1:
+			return or1k_jtag_read_memory8(&or1k->jtag, address, 
+						      count, 
+						      buffer);
+			break;
+		default:
+			break;
+		}
 	}
 
 	return ERROR_OK;
@@ -593,22 +672,27 @@ static int or1k_write_memory(struct target *target, uint32_t address,
 	}
 
 	/* sanitize arguments */
-	if (((size != 4) && (size != 2) && (size != 1)) || (count == 0) || !(buffer))
+	if (((size != 4) && (size != 2) && (size != 1)) || (count == 0) || 
+	    !(buffer))
 		return ERROR_INVALID_ARGUMENTS;
 
-	if (((size == 4) && (address & 0x3u)) || ((size == 2) && (address & 0x1u)))
+	if (((size == 4) && (address & 0x3u)) || ((size == 2) && 
+						  (address & 0x1u)))
 		return ERROR_TARGET_UNALIGNED_ACCESS;
 
 	switch (size)
 	{
 	case 4:
-		return or1k_jtag_write_memory32(&or1k->jtag, address, count, (uint32_t*)(void *)buffer);
+		return or1k_jtag_write_memory32(&or1k->jtag, address, count, 
+						(uint32_t*)(void *)buffer);
 		break;
 	case 2:
-		return or1k_jtag_write_memory16(&or1k->jtag, address, count, (uint16_t*)(void *)buffer);
+		return or1k_jtag_write_memory16(&or1k->jtag, address, count, 
+						(uint16_t*)(void *)buffer);
 		break;
 	case 1:
-		return or1k_jtag_write_memory8(&or1k->jtag, address, count, buffer);
+		return or1k_jtag_write_memory8(&or1k->jtag, address, count, 
+					       buffer);
 		break;
 	default:
 		break;
@@ -738,6 +822,7 @@ int or1k_get_gdb_reg_list(struct target *target, struct reg **reg_list[],
 	or1k_save_context(target);
 	
 	*reg_list_size = OR1KNUMCOREREGS;
+	/* this is free()'d back in gdb_server.c's gdb_get_register_packet() */
 	*reg_list = malloc(sizeof(struct reg*) * (*reg_list_size));
 
 	for (i = 0; i < OR1KNUMCOREREGS; i++)
@@ -751,6 +836,7 @@ int or1k_get_gdb_reg_list(struct target *target, struct reg **reg_list[],
 extern struct connection *current_rsp_connection;
 extern int gdb_rsp_resp_error;
 #define ERROR_OK_NO_GDB_REPLY (-42)
+#define OR1K_SPR_ACCESS_ALWAYS_AGAINST_HW 0
 
 COMMAND_HANDLER(or1k_readspr_command_handler)
 {
@@ -783,6 +869,7 @@ COMMAND_HANDLER(or1k_readspr_command_handler)
 		{
 			/* Reg is part of our cache. */
 			reg_cache_index = i;
+#if OR1K_SPR_ACCESS_ALWAYS_AGAINST_HW==0
 			/* Is the local copy currently valid ? */
 			if (or1k->core_cache->reg_list[i].valid == 1)
 			{	
@@ -791,7 +878,15 @@ COMMAND_HANDLER(or1k_readspr_command_handler)
 
 				LOG_DEBUG("reading cached value");
 			}
-			
+#else
+			/* Now get the register value via JTAG */
+			retval = or1k_jtag_read_cpu(&or1k->jtag, regnum, &regval);
+			if (retval != ERROR_OK)
+				return retval;
+		
+			/* Switch endianness of data just read */
+			h_u32_to_be((uint8_t*) &regval, regval);
+#endif			
 			break;
 		}
 	}
@@ -895,8 +990,12 @@ COMMAND_HANDLER(or1k_writespr_command_handler)
 				    regval);
 
 			LOG_DEBUG("caching written value");
-
+#if OR1K_SPR_ACCESS_ALWAYS_AGAINST_HW==0
 			return ERROR_OK;
+#else
+			/* Break so we go on to actually do the write */
+			break;
+#endif
 		}
 	}
 

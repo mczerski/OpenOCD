@@ -541,6 +541,9 @@ int or1k_jtag_mohor_debug_write_go(struct or1k_jtag *jtag_info,
 	int num_data8_fields = length_bytes % 4;
 	int num_data_fields = num_data32_fields + num_data8_fields;
 
+	LOG_DEBUG("Doing mohor debug write go, %d 32-bit fields, %d 8-bit",
+		  num_data32_fields, num_data8_fields);
+
 	struct scan_field *fields = malloc(sizeof(struct scan_field) *
 					   (num_data_fields + 5));	
 		
@@ -597,9 +600,6 @@ int or1k_jtag_mohor_debug_write_go(struct or1k_jtag *jtag_info,
 				or1k_jtag_mohor_debug_crc_calc(out_crc, 
 							       ((data[i]>>j)&
 								0x1));
-		
-		
-
 	}
 
 	/* CRC going out */
