@@ -483,8 +483,8 @@ static int or1k_resume(struct target *target, int current,
 	/* Clear the single step trigger in Debug Mode Register 1 (DMR1) */
 	or1k_jtag_read_cpu(&or1k->jtag, DMR1_CPU_REG_ADD, &regval);
 	h_u32_to_be((uint8_t*) &regval, regval);
-	//regval &= ~SPR_DMR1_ST;
-	regval |= SPR_DMR1_ST;
+	regval &= ~SPR_DMR1_ST;
+	//regval |= SPR_DMR1_ST;
 	h_u32_to_be((uint8_t*) &regval, regval);
 	or1k_jtag_write_cpu(&or1k->jtag, DMR1_CPU_REG_ADD, regval);
 	/* Set traps to be handled by the debug unit in the Debug Stop 
@@ -581,6 +581,8 @@ static int or1k_read_memory(struct target *target, uint32_t address,
 {
 	struct or1k_common *or1k = target_to_or1k(target);
 
+	int retval = ERROR_OK;
+
 	LOG_DEBUG("address: 0x%8.8" PRIx32 ", size: 0x%8.8" PRIx32 ", count: 0x%8.8" PRIx32 "", address, size, count);
 
 	if (target->state != TARGET_HALTED)
@@ -599,60 +601,49 @@ static int or1k_read_memory(struct target *target, uint32_t address,
 		return ERROR_TARGET_UNALIGNED_ACCESS;
 	
 	
-	if (size == 4 && count > 63)
+	if (size == 4 && count > 1)
 	{
-		/* Break reads up into 256 byte blocks */
-		uint32_t block_count_left = count & ~0x3;
+		/* Break up large reads and do them individually */
+		uint32_t block_count_left = count;
 		uint32_t block_count_address = address;
 		uint8_t *block_count_buffer = (uint8_t*) buffer;
 		
-		uint32_t remain = count % 256;
-
-		while (block_count_left > (64*4))
+		while (block_count_left)
 		{
-			or1k_jtag_read_memory32(&or1k->jtag, 
-						block_count_address , 64,
+			retval = or1k_jtag_read_memory32(&or1k->jtag, 
+						block_count_address , 1,
 						(uint32_t*)block_count_buffer);
+
+			if (retval != ERROR_OK)
+				return retval;
 			
-			block_count_left -= (64*4);
-			block_count_address += (64*4);
-			block_count_buffer += (64*4);
+			block_count_left -= 1;
+			block_count_address += 4;
+			block_count_buffer += 4;
 		}
-		if (remain)
-		{
-			
-			address += (count - remain);
-			buffer += (count - remain);
-			LOG_DEBUG("read remaining %d bytes from address 0x%x",
-				  remain, block_count_address);
-			or1k_jtag_read_memory8(&or1k->jtag, block_count_address,
-					       remain, 
-					       (uint8_t *)block_count_buffer);
-		}
-	} 
-	else
-	{
+
+		return ERROR_OK;
+	}
 	
-		switch (size)
-		{
-		case 4:
-			return or1k_jtag_read_memory32(&or1k->jtag, address, 
-						       count, 
-						       (uint32_t*)(void *)buffer);
-			break;
-		case 2:
-			return or1k_jtag_read_memory16(&or1k->jtag, address, 
-						       count, 
-						       (uint16_t*)(void *)buffer);
-			break;
-		case 1:
-			return or1k_jtag_read_memory8(&or1k->jtag, address, 
-						      count, 
-						      buffer);
-			break;
-		default:
-			break;
-		}
+	switch (size)
+	{
+	case 4:
+		return or1k_jtag_read_memory32(&or1k->jtag, address, 
+					       count, 
+					       (uint32_t*)(void *)buffer);
+		break;
+	case 2:
+		return or1k_jtag_read_memory16(&or1k->jtag, address, 
+					       count, 
+					       (uint16_t*)(void *)buffer);
+		break;
+	case 1:
+		return or1k_jtag_read_memory8(&or1k->jtag, address, 
+					      count, 
+					      buffer);
+		break;
+	default:
+		break;
 	}
 
 	return ERROR_OK;
@@ -662,6 +653,8 @@ static int or1k_write_memory(struct target *target, uint32_t address,
 		uint32_t size, uint32_t count, const uint8_t *buffer)
 {
 	struct or1k_common *or1k = target_to_or1k(target);
+	
+	int retval = ERROR_OK;
 
 	LOG_DEBUG("address: 0x%8.8" PRIx32 ", size: 0x%8.8" PRIx32 ", count: 0x%8.8" PRIx32 "", address, size, count);
 
@@ -680,6 +673,32 @@ static int or1k_write_memory(struct target *target, uint32_t address,
 						  (address & 0x1u)))
 		return ERROR_TARGET_UNALIGNED_ACCESS;
 
+	if (size == 4 && count > 1)
+	{
+		/* Break up large reads and do them individually */
+		uint32_t block_count_left = count;
+		uint32_t block_count_address = address;
+		uint8_t *block_count_buffer = (uint8_t*) buffer;
+		
+		while (block_count_left)
+		{
+			retval = or1k_jtag_write_memory32(&or1k->jtag, 
+							 block_count_address , 
+							 1,
+						 (uint32_t*)block_count_buffer);
+
+			if (retval != ERROR_OK)
+				return retval;
+			
+			block_count_left -= 1;
+			block_count_address += 4;
+			block_count_buffer += 4;
+		}
+		
+		return ERROR_OK;
+	}
+
+	
 	switch (size)
 	{
 	case 4:
@@ -762,38 +781,25 @@ static int or1k_bulk_write_memory(struct target *target, uint32_t address,
 {
 	struct or1k_common *or1k = target_to_or1k(target);
 	
+	/* Count is in 4-byte words */
 	LOG_DEBUG("address 0x%x count %d", address, count);
 
-	/* Break it up into 256 byte blocks */
+	/* Break it up into 4 byte blocks */
 
-	uint32_t block_count_left = count & ~0x3;
+	uint32_t block_count_left = count;
 	uint32_t block_count_address = address;
 	uint8_t *block_count_buffer = (uint8_t*) buffer;
 
-        uint32_t remain = count % 256;
-	
-	while (block_count_left > (64*4))
+	while (block_count_left)
 	{
 		or1k_jtag_write_memory32(&or1k->jtag, 
-					 block_count_address , 64,
+					 block_count_address , 1,
 					 (uint32_t*)block_count_buffer);
 
-		block_count_left -= (64*4);
-		block_count_address += (64*4);
-		block_count_buffer += (64*4);
+		block_count_left -= 1;
+		block_count_address += 4;
+		block_count_buffer += 4;
 	}
-
-	if (remain)
-	{
-		
-		address += (count - remain);
-		buffer += (count - remain);
-		LOG_DEBUG("remaining %d bytes from address 0x%x",
-			  remain, block_count_address);
-		or1k_jtag_write_memory8(&or1k->jtag, block_count_address, 
-					remain, (uint8_t *)block_count_buffer);
-	}
-
 	return ERROR_OK;
 }
 
