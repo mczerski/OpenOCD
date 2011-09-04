@@ -650,12 +650,87 @@ static int or1k_remove_watchpoint(struct target *target,
 	return ERROR_OK;
 }
 
+static int or1k_bulk_read_memory(struct target *target, uint32_t address,
+		uint32_t count, const uint8_t *buffer)
+{
+	struct or1k_common *or1k = target_to_or1k(target);
+	
+	/* Count is in 4-byte words */
+	LOG_DEBUG("address 0x%x count %d", address, count);
+	/*printf("bulk read memory: address 0x%x count %d\n", address, count);*/
+
+	/* Break it up into 4 byte blocks */
+
+	uint32_t block_count_left = count;
+	uint32_t block_count_address = address;
+	uint8_t *block_count_buffer = (uint8_t*) buffer;
+
+	const unsigned int blocks_per_round = 1; /* >1 !working currently. >:( */
+	unsigned int blocks_this_round;
+
+	while (block_count_left)
+	{
+
+		blocks_this_round = (block_count_left > blocks_per_round) ?  
+			blocks_per_round : block_count_left;
+
+		or1k_jtag_read_memory32(&or1k->jtag, 
+					 block_count_address , 
+					 blocks_this_round,
+					 (uint32_t*)block_count_buffer);
+
+		block_count_left -= blocks_this_round;
+		block_count_address += 4*blocks_per_round;
+		block_count_buffer += 4*blocks_per_round;
+
+
+	}
+	return ERROR_OK;
+}
+
+static int or1k_bulk_write_memory(struct target *target, uint32_t address,
+		uint32_t count, const uint8_t *buffer)
+{
+	struct or1k_common *or1k = target_to_or1k(target);
+	
+	/* Count is in 4-byte words */
+	LOG_DEBUG("address 0x%x count %d", address, count);
+	/*printf("bulk write memory: address 0x%x count %d\n", address, count);*/
+
+	/* Break it up into 4 byte blocks */
+
+	uint32_t block_count_left = count;
+	uint32_t block_count_address = address;
+	uint8_t *block_count_buffer = (uint8_t*) buffer;
+
+	const unsigned int blocks_per_round = 64; /* Looks like this is max 
+						     with libftdi driver */
+	unsigned int blocks_this_round;
+
+	while (block_count_left)
+	{
+
+		blocks_this_round = (block_count_left > blocks_per_round) ?  
+			blocks_per_round : block_count_left;
+
+		or1k_jtag_write_memory32(&or1k->jtag, 
+					 block_count_address , 
+					 blocks_this_round,
+					 (uint32_t*)block_count_buffer);
+
+		block_count_left -= blocks_this_round;
+		block_count_address += 4*blocks_per_round;
+		block_count_buffer += 4*blocks_per_round;
+
+
+	}
+	return ERROR_OK;
+}
+
 static int or1k_read_memory(struct target *target, uint32_t address,
 		uint32_t size, uint32_t count, uint8_t *buffer)
 {
 	struct or1k_common *or1k = target_to_or1k(target);
-
-	int retval = ERROR_OK;
 
 	LOG_DEBUG("address: 0x%8.8" PRIx32 ", size: 0x%8.8" PRIx32 ", count: 0x%8.8" PRIx32 "", address, size, count);
 
@@ -676,28 +751,7 @@ static int or1k_read_memory(struct target *target, uint32_t address,
 	
 	
 	if (size == 4 && count > 1)
-	{
-		/* Break up large reads and do them individually */
-		uint32_t block_count_left = count;
-		uint32_t block_count_address = address;
-		uint8_t *block_count_buffer = (uint8_t*) buffer;
-		
-		while (block_count_left)
-		{
-			retval = or1k_jtag_read_memory32(&or1k->jtag, 
-						block_count_address , 1,
-						(uint32_t*)block_count_buffer);
-
-			if (retval != ERROR_OK)
-				return retval;
-			
-			block_count_left -= 1;
-			block_count_address += 4;
-			block_count_buffer += 4;
-		}
-
-		return ERROR_OK;
-	}
+		return or1k_bulk_read_memory(target, address, count, buffer);
 	
 	switch (size)
 	{
@@ -728,8 +782,6 @@ static int or1k_write_memory(struct target *target, uint32_t address,
 {
 	struct or1k_common *or1k = target_to_or1k(target);
 	
-	int retval = ERROR_OK;
-
 	LOG_DEBUG("address: 0x%8.8" PRIx32 ", size: 0x%8.8" PRIx32 ", count: 0x%8.8" PRIx32 "", address, size, count);
 
 	if (target->state != TARGET_HALTED)
@@ -748,30 +800,7 @@ static int or1k_write_memory(struct target *target, uint32_t address,
 		return ERROR_TARGET_UNALIGNED_ACCESS;
 
 	if (size == 4 && count > 1)
-	{
-		/* Break up large reads and do them individually */
-		uint32_t block_count_left = count;
-		uint32_t block_count_address = address;
-		uint8_t *block_count_buffer = (uint8_t*) buffer;
-		
-		while (block_count_left)
-		{
-			retval = or1k_jtag_write_memory32(&or1k->jtag, 
-							 block_count_address , 
-							 1,
-						 (uint32_t*)block_count_buffer);
-
-			if (retval != ERROR_OK)
-				return retval;
-			
-			block_count_left -= 1;
-			block_count_address += 4;
-			block_count_buffer += 4;
-		}
-		
-		return ERROR_OK;
-	}
-
+		return or1k_bulk_write_memory(target, address, count, buffer);
 	
 	switch (size)
 	{
@@ -849,34 +878,6 @@ static int or1k_examine(struct target *target)
 
 	return ERROR_OK;
 }
-
-static int or1k_bulk_write_memory(struct target *target, uint32_t address,
-		uint32_t count, const uint8_t *buffer)
-{
-	struct or1k_common *or1k = target_to_or1k(target);
-	
-	/* Count is in 4-byte words */
-	LOG_DEBUG("address 0x%x count %d", address, count);
-
-	/* Break it up into 4 byte blocks */
-
-	uint32_t block_count_left = count;
-	uint32_t block_count_address = address;
-	uint8_t *block_count_buffer = (uint8_t*) buffer;
-
-	while (block_count_left)
-	{
-		or1k_jtag_write_memory32(&or1k->jtag, 
-					 block_count_address , 1,
-					 (uint32_t*)block_count_buffer);
-
-		block_count_left -= 1;
-		block_count_address += 4;
-		block_count_buffer += 4;
-	}
-	return ERROR_OK;
-}
-
 
 int or1k_arch_state(struct target *target)
 {
