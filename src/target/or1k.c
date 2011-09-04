@@ -30,6 +30,7 @@
 #include "or1k_jtag.h"
 #include "or1k.h"
 
+#include <helper/time_support.h>
 #include "server/server.h"
 #include "server/gdb_server.h"
 
@@ -42,45 +43,44 @@ static char* or1k_core_reg_list[] =
 	"ppc", "npc", "sr"
 };
 
-struct or1k_core_reg 
-or1k_core_reg_list_arch_info[OR1KNUMCOREREGS] =
-  {
-	  {0, 1024, NULL, NULL, },
-	  {1, 1025, NULL, NULL},
-	  {2, 1026, NULL, NULL},
-	  {3, 1027, NULL, NULL},
-	  {4, 1028, NULL, NULL},
-	  {5, 1029, NULL, NULL},
-	  {6, 1030, NULL, NULL},
-	  {7, 1031, NULL, NULL},
-	  {8, 1032, NULL, NULL},
-	  {9, 1033, NULL, NULL},
-	  {10, 1034, NULL, NULL},
-	  {11, 1035, NULL, NULL},
-	  {12, 1036, NULL, NULL},
-	  {13, 1037, NULL, NULL},
-	  {14, 1038, NULL, NULL},
-	  {15, 1039, NULL, NULL},
-	  {16, 1040, NULL, NULL},
-	  {17, 1041, NULL, NULL},
-	  {18, 1042, NULL, NULL},
-	  {19, 1043, NULL, NULL},
-	  {20, 1044, NULL, NULL},
-	  {21, 1045, NULL, NULL},
-	  {22, 1046, NULL, NULL},
-	  {23, 1047, NULL, NULL},
-	  {24, 1048, NULL, NULL},
-	  {25, 1049, NULL, NULL},
-	  {26, 1050, NULL, NULL},
-	  {27, 1051, NULL, NULL},
-	  {28, 1052, NULL, NULL},
-	  {29, 1053, NULL, NULL},
-	  {30, 1054, NULL, NULL},
-	  {31, 1055, NULL, NULL},
-	  {32, 18, NULL, NULL},
-	  {33, 16, NULL, NULL},
-	  {34, 17, NULL, NULL},
-  };
+struct or1k_core_reg or1k_core_reg_list_arch_info[OR1KNUMCOREREGS] =
+{
+	{0, 1024, NULL, NULL,},
+	{1, 1025, NULL, NULL},
+	{2, 1026, NULL, NULL},
+	{3, 1027, NULL, NULL},
+	{4, 1028, NULL, NULL},
+	{5, 1029, NULL, NULL},
+	{6, 1030, NULL, NULL},
+	{7, 1031, NULL, NULL},
+	{8, 1032, NULL, NULL},
+	{9, 1033, NULL, NULL},
+	{10, 1034, NULL, NULL},
+	{11, 1035, NULL, NULL},
+	{12, 1036, NULL, NULL},
+	{13, 1037, NULL, NULL},
+	{14, 1038, NULL, NULL},
+	{15, 1039, NULL, NULL},
+	{16, 1040, NULL, NULL},
+	{17, 1041, NULL, NULL},
+	{18, 1042, NULL, NULL},
+	{19, 1043, NULL, NULL},
+	{20, 1044, NULL, NULL},
+	{21, 1045, NULL, NULL},
+	{22, 1046, NULL, NULL},
+	{23, 1047, NULL, NULL},
+	{24, 1048, NULL, NULL},
+	{25, 1049, NULL, NULL},
+	{26, 1050, NULL, NULL},
+	{27, 1051, NULL, NULL},
+	{28, 1052, NULL, NULL},
+	{29, 1053, NULL, NULL},
+	{30, 1054, NULL, NULL},
+	{31, 1055, NULL, NULL},
+	{32, 18, NULL, NULL},
+	{33, 16, NULL, NULL},
+	{34, 17, NULL, NULL},
+};
 
 
 static int or1k_read_core_reg(struct target *target, int num);
@@ -317,31 +317,74 @@ static int or1k_halt(struct target *target)
 	return ERROR_OK;
 }
 
+static int or1k_is_cpu_running(struct target *target, int* running)
+{
+	struct or1k_common *or1k = target_to_or1k(target);
+	int retval;
+	uint32_t cpu_cr;
+
+	/* Have a retry loop to determine of the CPU is running.
+	   If target has been hard reset for any reason, it might take a couple
+	   of goes before it's ready again.
+	*/
+
+	int tries = 0;
+	const int RETRIES_MAX = 5;
+	while (tries < RETRIES_MAX)
+	{
+
+		tries++;
+		/* Specific to Mohor debug interface - others may have to do
+		 * something different here. 
+		 */
+		retval = or1k_jtag_read_cpu_cr(&or1k->jtag, &cpu_cr);
+
+		if (retval != ERROR_OK)
+		{
+			LOG_WARNING("Debug IF CPU control reg read failure.");
+			/* Try once to restart the JTAG infrastructure -
+			   quite possibly the board has just been reset. */
+			LOG_WARNING("Resetting JTAG TAP state and reconnectiong to debug IF.");
+			or1k_jtag_init(&or1k->jtag);
+			
+			LOG_WARNING("attempt %d of %d",tries,RETRIES_MAX);
+
+			/* TODO: perhaps some sort of time delay here. 1s? */
+			sleep(1);
+				
+			
+
+			continue;
+			
+		}
+		else
+		{
+			/* Specific to Mohor debug interface */
+			*running = !(cpu_cr & OR1K_MOHORDBGIF_CPU_CR_STALL);
+			return retval;
+		}
+	}
+	LOG_WARNING("Could not re-establish communication with target");
+	return retval;
+}
+
 static int or1k_poll(struct target *target)
 {
-	uint32_t cpu_cr;
+	
 	int retval;
-	struct or1k_common *or1k = target_to_or1k(target);
+	int running;
 
-	/* Possible specific to Mohor debug interface - others may have to do
-	 * something different here. 
-	 */
-	retval = or1k_jtag_read_cpu_cr(&or1k->jtag, &cpu_cr);
+	retval = or1k_is_cpu_running(target, &running);
 	if (retval != ERROR_OK)
-	{
-		/* Try once to restart the JTAG infrastructure -
-		   quite possibly the board has just been reset. */
-		or1k_jtag_init(&or1k->jtag);
+		return retval;
 
-		retval = or1k_jtag_read_cpu_cr(&or1k->jtag, &cpu_cr);
-		if (retval != ERROR_OK)
-			return retval;
-
-	}
-
+	/*LOG_DEBUG("running: %d",running);*/
+	
+	
 	/* check for processor halted */
-	if (cpu_cr & OR1K_MOHORDBGIF_CPU_CR_STALL)
+	if (!running)
 	{
+		/* It's actually stalled, so update our software's state */
 		if ((target->state == TARGET_RUNNING) || 
 		    (target->state == TARGET_RESET))
 		{
@@ -364,7 +407,7 @@ static int or1k_poll(struct target *target)
 						    TARGET_EVENT_DEBUG_HALTED);
 		}
 	}
-	else
+	else /* ... target is running */
 	{
 		
 		/* If target was supposed to be stalled, stall it again */
@@ -382,9 +425,9 @@ static int or1k_poll(struct target *target)
 						    TARGET_EVENT_DEBUG_HALTED);
 		}
 		
-		/*
-		  target->state = TARGET_RUNNING;
-		*/
+
+		target->state = TARGET_RUNNING;
+
 	}
 
 
@@ -412,13 +455,17 @@ static int or1k_soft_reset_halt(struct target *target)
 	return ERROR_OK;
 }
 
-static int or1k_resume(struct target *target, int current,
-		uint32_t address, int handle_breakpoints, int debug_execution)
+static int or1k_resume_or_step(struct target *target, int current,
+			       uint32_t address, int handle_breakpoints, 
+			       int debug_execution, int step)
 {
 	struct or1k_common *or1k = target_to_or1k(target);
 	struct breakpoint *breakpoint = NULL;
 	uint32_t resume_pc, resume_pc_be;
 	int retval;
+
+	LOG_DEBUG(" - ");
+	LOG_DEBUG(" addr: 0x%x, stepping: %d\n",address, step);
 
 	if (target->state != TARGET_HALTED)
 	{
@@ -438,15 +485,10 @@ static int or1k_resume(struct target *target, int current,
 	/* current = 1: continue on current pc, otherwise continue at <address> */
 	if (!current)
 	{
-#if 0
-		if (retval != ERROR_OK)
-			return retval;
-#endif
+		buf_set_u32(or1k->core_cache->reg_list[OR1K_REG_NPC].value, 0, 32,
+			    address);
 	}
 
-	/* Not sure what we do here - just guessing we fish out the PC from the 
-	 * register cache and continue - Julius
-	 */
 	resume_pc = 
 		buf_get_u32(or1k->core_cache->reg_list[OR1K_REG_NPC].value, 
 			    0, 32);
@@ -483,8 +525,11 @@ static int or1k_resume(struct target *target, int current,
 	/* Clear the single step trigger in Debug Mode Register 1 (DMR1) */
 	or1k_jtag_read_cpu(&or1k->jtag, DMR1_CPU_REG_ADD, &regval);
 	h_u32_to_be((uint8_t*) &regval, regval);
-	regval &= ~SPR_DMR1_ST;
-	//regval |= SPR_DMR1_ST;
+	if (step)
+		regval |= SPR_DMR1_ST;
+	else
+		regval &= ~SPR_DMR1_ST;
+
 	h_u32_to_be((uint8_t*) &regval, regval);
 	or1k_jtag_write_cpu(&or1k->jtag, DMR1_CPU_REG_ADD, regval);
 	/* Set traps to be handled by the debug unit in the Debug Stop 
@@ -515,7 +560,10 @@ static int or1k_resume(struct target *target, int current,
 	if (retval != ERROR_OK)
 		return retval;
 
-	target->debug_reason = DBG_REASON_NOTHALTED;
+	if (step)
+		target->debug_reason = DBG_REASON_SINGLESTEP;
+	else
+		target->debug_reason = DBG_REASON_NOTHALTED;
 
 	/* registers are now invalid */
 	register_cache_invalidate(or1k->core_cache);
@@ -533,15 +581,41 @@ static int or1k_resume(struct target *target, int current,
 		LOG_DEBUG("target debug resumed at 0x%" PRIx32 "", resume_pc);
 	}
 
+	if (step)
+	{
+
+		/* Step should have occurred. */
+		if ((retval = or1k_debug_entry(target)) != ERROR_OK)
+			return retval;
+		
+		target_call_event_callbacks(target, TARGET_EVENT_HALTED);
+	}
+	
 	return ERROR_OK;
 }
 
-static int or1k_step(struct target *target, int current,
-		uint32_t address, int handle_breakpoints)
+static int or1k_resume(struct target *target, int current,
+		uint32_t address, int handle_breakpoints, int debug_execution)
 {
-	LOG_ERROR("%s: implement me", __func__);
+	return or1k_resume_or_step(target, current, address, 
+				   handle_breakpoints, 
+				   debug_execution, 
+				   /* Single step... not here */
+				   0);
+}
 
-	return ERROR_OK;
+static int or1k_step(struct target *target, int current,
+		     uint32_t address, int handle_breakpoints)
+{
+	return or1k_resume_or_step(target, current, address, 
+				   handle_breakpoints, 
+				   /* TARGET_EVENT_DEBUG_RESUMED:
+				      target resumed to execute on behalf of 
+				      the debugger */
+				   1, 
+				   /* Single step... yes */
+				   1);
+	
 }
 
 static int or1k_add_breakpoint(struct target *target, 
@@ -766,7 +840,7 @@ static int or1k_examine(struct target *target)
  		or1k_jtag_read_cpu_cr(&or1k->jtag, &cpu_cr);
 		if (cpu_cr & OR1K_MOHORDBGIF_CPU_CR_STALL) 
 		{
-			LOG_INFO("target is halted");
+			LOG_DEBUG("target is halted");
 			target->state = TARGET_HALTED;
 		}
 		else

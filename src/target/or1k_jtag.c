@@ -456,8 +456,6 @@ int or1k_jtag_mohor_debug_read_go(struct or1k_jtag *jtag_info,
 	/* Calculate expected CRC for data and status */
 	expected_in_crc = 0xffffffff;
 
-	/*LOG_DEBUG("Debug GO Rx data:");*/
-
 	for(i=0;i<num_data_fields;i++)
 	{
 		/* Process received data byte at a time */
