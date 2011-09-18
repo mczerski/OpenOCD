@@ -26,8 +26,8 @@
 
 struct target;
 
+/* OR1K registers */
 #define OR1KNUMCOREREGS (32 + 3)
-
 
 enum or1k_reg_nums {
 	OR1K_REG_R0 = 0,
@@ -92,5 +92,18 @@ struct or1k_core_reg
 
 /* Make this available to or1k_jtag.h */
 extern struct or1k_core_reg or1k_core_reg_list_arch_info[OR1KNUMCOREREGS];
+
+/*! ORBIS32 Trap instruction */
+#define OR1K_TRAP_INSTR  0x21000001
+
+/* OR1K Debug registers and bits needed for resuming */
+#define OR1K_DMR1_CPU_REG_ADD ((6<<11)+16)/* Debug Mode Register 1 0x3010 */
+#define OR1K_DMR2_CPU_REG_ADD ((6<<11)+17)/* Debug Mode Register 2 0x3011 */
+#define OR1K_DSR_CPU_REG_ADD	 ((6<<11)+20)/* Debug Stop Register 0x3014 */
+#define OR1K_DRR_CPU_REG_ADD  ((6<<11)+21)/* Debug Reason Register 0x3015 */
+#define OR1K_DMR1_ST 	0x00400000	/* Single-step trace */
+#define OR1K_DMR2_WGB   	0x003ff000	/* Watchpoints generating breakpoint */
+#define OR1K_DSR_TE	0x00002000	/* Trap exception */
+
 
 #endif

@@ -82,7 +82,6 @@ struct or1k_core_reg or1k_core_reg_list_arch_info[OR1KNUMCOREREGS] =
 	{34, 17, NULL, NULL},
 };
 
-
 static int or1k_read_core_reg(struct target *target, int num);
 static int or1k_write_core_reg(struct target *target, int num);
 
@@ -465,7 +464,8 @@ static int or1k_resume_or_step(struct target *target, int current,
 	int retval;
 
 	LOG_DEBUG(" - ");
-	LOG_DEBUG(" addr: 0x%x, stepping: %d\n",address, step);
+	LOG_DEBUG(" addr: 0x%x, stepping: %d, handle breakpoints %d\n",
+		  address, step, handle_breakpoints);
 
 	if (target->state != TARGET_HALTED)
 	{
@@ -476,22 +476,17 @@ static int or1k_resume_or_step(struct target *target, int current,
 	if (!debug_execution)
 	{
 		target_free_all_working_areas(target);
-		/*
-		avr32_ap7k_enable_breakpoints(target);
-		avr32_ap7k_enable_watchpoints(target);
-		*/
 	}
 
-	/* current = 1: continue on current pc, otherwise continue at <address> */
+	/* current ? continue on current pc : continue at <address> */
 	if (!current)
 	{
-		buf_set_u32(or1k->core_cache->reg_list[OR1K_REG_NPC].value, 0, 32,
-			    address);
+		buf_set_u32(or1k->core_cache->reg_list[OR1K_REG_NPC].value, 0,
+			    32, address);
 	}
 
-	resume_pc = 
-		buf_get_u32(or1k->core_cache->reg_list[OR1K_REG_NPC].value, 
-			    0, 32);
+	resume_pc = buf_get_u32(or1k->core_cache->reg_list[OR1K_REG_NPC].value,
+				0, 32);
 	or1k_restore_context(target);
 
 	h_u32_to_be((uint8_t*) &resume_pc_be, resume_pc);
@@ -499,48 +494,41 @@ static int or1k_resume_or_step(struct target *target, int current,
 	/* Last, write the NPC, again */
 	or1k_jtag_write_cpu(&or1k->jtag,
 			    /* NPC's address */
-			    or1k_core_reg_list_arch_info[OR1K_REG_NPC].spr_num, 
+			    or1k_core_reg_list_arch_info[OR1K_REG_NPC].spr_num,
 			    /* What it should be set to */
 			    resume_pc_be);
-
-	/* Debug unwinding stuff */
-#define DMR1_CPU_REG_ADD ((6<<11)+16)/* Debug Mode Register 1 (DMR1) 0x3010 */
-#define DMR2_CPU_REG_ADD ((6<<11)+17)/* Debug Mode Register 2 (DMR2) 0x3011 */
-#define DSR_CPU_REG_ADD	 ((6<<11)+20)/* Debug Stop Register (DSR) 0x3014 */
-#define DRR_CPU_REG_ADD  ((6<<11)+21)/* Debug Reason Register (DRR) 0x3015 */
-#define SPR_DMR1_ST 	0x00400000	/* Single-step trace */
-#define SPR_DMR2_WGB   	0x003ff000	/* Watchpoints generating breakpoint */
-#define SPR_DSR_TE	0x00002000	/* Trap exception */
 
 	uint32_t regval;
 	regval = 0;
 	/* Clear Debug Reason Register (DRR) */
-	or1k_jtag_write_cpu(&or1k->jtag,DRR_CPU_REG_ADD, regval);
+	or1k_jtag_write_cpu(&or1k->jtag, OR1K_DRR_CPU_REG_ADD, regval);
 	/* Clear watchpoint break generation in Debug Mode Register 2 (DMR2) */
-	or1k_jtag_read_cpu(&or1k->jtag, DMR2_CPU_REG_ADD, &regval);
+	or1k_jtag_read_cpu(&or1k->jtag, OR1K_DMR2_CPU_REG_ADD, &regval);
 	h_u32_to_be((uint8_t*) &regval, regval);
-	regval &= ~SPR_DMR2_WGB;
+	regval &= ~OR1K_DMR2_WGB;
 	h_u32_to_be((uint8_t*) &regval, regval);
-	or1k_jtag_write_cpu(&or1k->jtag, DMR2_CPU_REG_ADD, regval);
+	or1k_jtag_write_cpu(&or1k->jtag, OR1K_DMR2_CPU_REG_ADD, regval);
 	/* Clear the single step trigger in Debug Mode Register 1 (DMR1) */
-	or1k_jtag_read_cpu(&or1k->jtag, DMR1_CPU_REG_ADD, &regval);
+	or1k_jtag_read_cpu(&or1k->jtag, OR1K_DMR1_CPU_REG_ADD, &regval);
 	h_u32_to_be((uint8_t*) &regval, regval);
 	if (step)
-		regval |= SPR_DMR1_ST;
+		regval |= OR1K_DMR1_ST;
 	else
-		regval &= ~SPR_DMR1_ST;
+		regval &= ~OR1K_DMR1_ST;
 
 	h_u32_to_be((uint8_t*) &regval, regval);
-	or1k_jtag_write_cpu(&or1k->jtag, DMR1_CPU_REG_ADD, regval);
+	or1k_jtag_write_cpu(&or1k->jtag, OR1K_DMR1_CPU_REG_ADD, regval);
 	/* Set traps to be handled by the debug unit in the Debug Stop 
 	   Register (DSR) */
-	or1k_jtag_read_cpu(&or1k->jtag, DSR_CPU_REG_ADD, &regval);
+	or1k_jtag_read_cpu(&or1k->jtag, OR1K_DSR_CPU_REG_ADD, &regval);
 	h_u32_to_be((uint8_t*) &regval, regval);
-	regval |= SPR_DSR_TE;
+	/* TODO - check if we have any software breakpoints in place before
+	   setting this value - the kernel, for instance, relies on l.trap
+	   instructions not stalling the processor! */
+	regval |= OR1K_DSR_TE;
 	h_u32_to_be((uint8_t*) &regval, regval);
-	or1k_jtag_write_cpu(&or1k->jtag, DSR_CPU_REG_ADD, regval);
+	or1k_jtag_write_cpu(&or1k->jtag, OR1K_DSR_CPU_REG_ADD, regval);
 	 
-
 	/* the front-end may request us not to handle breakpoints */
 	if (handle_breakpoints)
 	{
@@ -600,7 +588,7 @@ static int or1k_resume(struct target *target, int current,
 	return or1k_resume_or_step(target, current, address, 
 				   handle_breakpoints, 
 				   debug_execution, 
-				   /* Single step... not here */
+				   /* Single step? No. */
 				   0);
 }
 
@@ -613,7 +601,7 @@ static int or1k_step(struct target *target, int current,
 				      target resumed to execute on behalf of 
 				      the debugger */
 				   1, 
-				   /* Single step... yes */
+				   /* Single step? Yes. */
 				   1);
 	
 }
@@ -621,16 +609,52 @@ static int or1k_step(struct target *target, int current,
 static int or1k_add_breakpoint(struct target *target, 
 			       struct breakpoint *breakpoint)
 {
-	LOG_ERROR("%s: implement me", __func__);
+	LOG_DEBUG("Adding breakpoint: addr %08x, len %d, type %d, set: %d, id: %d",
+		  breakpoint->address, breakpoint->length, breakpoint->type,
+		  breakpoint->set, breakpoint->unique_id);
 
+	struct or1k_common *or1k = target_to_or1k(target);
+
+	/* Only support SW breakpoints for now. */
+	if (breakpoint->type == BKPT_HARD)
+		LOG_ERROR("HW breakpoints not supported for now. Doing SW breakpoint.");
+	
+	/* Read and save the instruction */
+	or1k_jtag_read_memory32(&or1k->jtag, 
+				breakpoint->address , 
+				1,
+				(uint32_t*)breakpoint->orig_instr);
+
+	/* Sub in the OR1K trap instruction */
+	uint32_t or1k_trap_insn = OR1K_TRAP_INSTR;
+	/* Switch endianess */
+	h_u32_to_be((uint8_t*) &or1k_trap_insn, or1k_trap_insn);
+	or1k_jtag_write_memory32(&or1k->jtag, 
+				breakpoint->address , 
+				 1,
+				 (uint32_t*)&or1k_trap_insn);
 	return ERROR_OK;
 }
 
 static int or1k_remove_breakpoint(struct target *target,
 				  struct breakpoint *breakpoint)
 {
-	LOG_ERROR("%s: implement me", __func__);
+	LOG_DEBUG("Removing breakpoint: addr %08x, len %d, type %d, set: %d, id: %d",
+		  breakpoint->address, breakpoint->length, breakpoint->type,
+		  breakpoint->set, breakpoint->unique_id);
 
+	struct or1k_common *or1k = target_to_or1k(target);
+
+	/* Only support SW breakpoints for now. */
+	if (breakpoint->type == BKPT_HARD)
+		LOG_ERROR("HW breakpoints not supported for now. Doing SW breakpoint.");
+
+	/* Replace the removed instruction */
+	or1k_jtag_write_memory32(&or1k->jtag, 
+				breakpoint->address , 
+				 1,
+				 (uint32_t*)breakpoint->orig_instr);
+	
 	return ERROR_OK;
 }
 
@@ -665,7 +689,7 @@ static int or1k_bulk_read_memory(struct target *target, uint32_t address,
 	uint32_t block_count_address = address;
 	uint8_t *block_count_buffer = (uint8_t*) buffer;
 
-	const unsigned int blocks_per_round = 1; /* >1 !working currently. >:( */
+	const unsigned int blocks_per_round = 1; /* >1 !working currently. >:(*/
 	unsigned int blocks_this_round;
 
 	while (block_count_left)
@@ -695,7 +719,7 @@ static int or1k_bulk_write_memory(struct target *target, uint32_t address,
 	
 	/* Count is in 4-byte words */
 	LOG_DEBUG("address 0x%x count %d", address, count);
-	/*printf("bulk write memory: address 0x%x count %d\n", address, count);*/
+	/*printf("bulk write memory: address 0x%x count %d\n",address, count);*/
 
 	/* Break it up into 4 byte blocks */
 
@@ -830,7 +854,7 @@ static int or1k_init_target(struct command_context *cmd_ctx,
 	struct or1k_common *or1k = target_to_or1k(target);
 
 	or1k->jtag.tap = target->tap;
-	
+
 	or1k_build_reg_cache(target);
 	return ERROR_OK;
 }
