@@ -1064,7 +1064,6 @@ COMMAND_HANDLER(or1k_writespr_command_handler)
 	struct or1k_common *or1k = target_to_or1k(target);
 	uint32_t regnum, regval, regval_be;
 	int retval;
-	int reg_cache_index = -1;
 	int i;
 
 	if (CMD_ARGC != 2)
@@ -1087,8 +1086,6 @@ COMMAND_HANDLER(or1k_writespr_command_handler)
 		if (arch_info->spr_num == regnum)
 		{
 			/* Reg is part of our cache. */
-			reg_cache_index = i;
-
 			or1k->core_cache->reg_list[i].valid = 1;
 			or1k->core_cache->reg_list[i].dirty = 1;
 			buf_set_u32(or1k->core_cache->reg_list[i].value, 0, 32,
