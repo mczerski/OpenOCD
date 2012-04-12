@@ -6,6 +6,12 @@ else
 OOCD_TRACE_FILES =
 endif
 
+if ADV_DEBUG_SYS
+OR1K_JTAG_FILES = or1k_jtag_adv.c
+else
+OR1K_JTAG_FILES = or1k_jtag.c
+endif
+
 BIN2C		= $(top_builddir)/src/helper/bin2char$(EXEEXT_FOR_BUILD)
 
 DEBUG_HANDLER	= $(srcdir)/xscale/debug_handler.bin
@@ -111,7 +117,7 @@ MIPS32_SRC = \
 
 OR1K_SRC = \
 	or1k.c \
-	or1k_jtag.c
+	$(OR1K_JTAG_FILES)
 
 noinst_HEADERS = \
 	algorithm.h \
