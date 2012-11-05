@@ -48,9 +48,40 @@ static int ft2232_execute_command(struct jtag_command *cmd)
 */
 static int jtag_vpi_execute_queue(void)
 {
-	//struct jtag_command* cmd = jtag_command_queue;	/* currently processed command */
+	struct jtag_command *cmd;
+	int ret = ERROR_OK;
 
-	return ERROR_OK;
+	for (cmd = jtag_command_queue; ret == ERROR_OK && cmd != NULL;
+	     cmd = cmd->next) {
+		switch (cmd->type) {
+		case JTAG_RESET:
+			printf("--> JTAG_RESET\n");
+			break;
+		case JTAG_RUNTEST:
+			printf("--> JTAG_RUNTEST\n");
+			break;
+		case JTAG_STABLECLOCKS:
+			printf("--> JTAG_STABLECLOCKS\n");
+			break;
+		case JTAG_TLR_RESET:
+			printf("--> JTAG_TLR_RESET\n");
+			break;
+		case JTAG_PATHMOVE:
+			printf("--> JTAG_PATHMOVE\n");
+			break;
+		case JTAG_TMS:
+			printf("--> JTAG_TMS\n");
+			break;
+		case JTAG_SLEEP:
+			printf("--> JTAG_SLEEP\n");
+			break;
+		case JTAG_SCAN:
+			printf("--> JTAG_SCAN\n");
+			break;
+		}
+	}
+
+	return ret;
 }
 
 static int jtag_vpi_init(void)
