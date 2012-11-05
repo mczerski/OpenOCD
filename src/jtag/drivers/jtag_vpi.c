@@ -7,6 +7,14 @@
 #include <transport/transport.h>
 #include <helper/time_support.h>
 
+#include <arpa/inet.h>
+
+#define SERVER_PORT	50010
+#define SERVER_ADDRESS	"127.0.0.1"
+
+int sockfd = 0;
+struct sockaddr_in serv_addr;
+
 static int jtag_vpi_speed(int speed)
 {
 	return ERROR_OK;
@@ -21,31 +29,7 @@ static int jtag_vpi_khz(int khz, int* jtag_speed)
 {
 	return ERROR_OK;
 }
-/*
-static int ft2232_execute_command(struct jtag_command *cmd)
-{
-	int retval;
 
-	switch (cmd->type)
-	{
-	case JTAG_RESET:	retval = ft2232_execute_reset(cmd); break;
-	case JTAG_RUNTEST:	retval = ft2232_execute_runtest(cmd); break;
-	case JTAG_TLR_RESET: retval = ft2232_execute_statemove(cmd); break;
-	case JTAG_PATHMOVE:	retval = ft2232_execute_pathmove(cmd); break;
-	case JTAG_SCAN:		retval = ft2232_execute_scan(cmd); break;
-	case JTAG_SLEEP:	retval = ft2232_execute_sleep(cmd); break;
-	case JTAG_STABLECLOCKS:	retval = ft2232_execute_stableclocks(cmd); break;
-	case JTAG_TMS:
-		retval = ft2232_execute_tms(cmd);
-		break;
-	default:
-		LOG_ERROR("BUG: unknown JTAG command type encountered");
-		retval = ERROR_JTAG_QUEUE_FAILED;
-		break;
-	}
-	return retval;
-}
-*/
 static int jtag_vpi_execute_queue(void)
 {
 	struct jtag_command *cmd;
@@ -86,25 +70,44 @@ static int jtag_vpi_execute_queue(void)
 
 static int jtag_vpi_init(void)
 {
+	if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+		printf("\n Error : Could not create socket \n");
+		return ERROR_FAIL;
+	}
+
+	memset(&serv_addr, 0, sizeof(serv_addr));
+
+	serv_addr.sin_family = AF_INET;
+	serv_addr.sin_port = htons(SERVER_PORT);
+
+	if (inet_pton(AF_INET, SERVER_ADDRESS, &serv_addr.sin_addr) <= 0) {
+		printf("\n inet_pton error occured\n");
+		return ERROR_FAIL;
+	}
+
+	printf("Connection to %s : %u ", SERVER_ADDRESS, SERVER_PORT);
+	if (connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
+		printf("failed\n");
+		return ERROR_FAIL;
+	}
+
+	printf("succeed\n");
+
 	return ERROR_OK;
 }
 
 
 static int jtag_vpi_quit(void)
 {
+	printf("--> jtag_vpi_quit\n");
+	close(sockfd);
+
 	return ERROR_OK;
 }
 
 COMMAND_HANDLER(jtag_vpi_handle_test)
 {
-	if (CMD_ARGC == 1)
-	{
-		LOG_ERROR("expected exactly one argument to ft2232_device_desc <description>");
-	}
-	else
-	{
-		LOG_ERROR("expected exactly one argument to ft2232_device_desc <description>");
-	}
+	printf("--> jtag_vpi_handle_test\n");
 
 	return ERROR_OK;
 }
