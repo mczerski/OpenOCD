@@ -1,0 +1,1 @@
+sudo ./src/openocd -f ./tcl/interface/jtag_vpi.cfg -f jtag_vpi.tcl
