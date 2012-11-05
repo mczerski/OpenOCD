@@ -37,6 +37,9 @@ DRIVERFILES += usb_blaster/usb_blaster.c
 DRIVERFILES += usb_blaster/ublast_access_ftdi.c
 DRIVERFILES += usb_blaster/ublast_access_ftd2xx.c
 endif
+if JTAG_VPI
+DRIVERFILES += jtag_vpi.c
+endif
 if AMTJTAGACCEL
 DRIVERFILES += amt_jtagaccel.c
 endif
