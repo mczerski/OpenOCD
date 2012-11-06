@@ -37,7 +37,7 @@ static int jtag_vpi_send_cmd(struct vpi_cmd * vpi)
 
 static int jtag_vpi_receive_cmd(struct vpi_cmd * vpi)
 {
-	return 0;//read(sockfd, vpi, sizeof(struct vpi_cmd));
+	return read(sockfd, vpi, sizeof(struct vpi_cmd));
 }
 
 static int jtag_vpi_speed(int speed)
@@ -184,6 +184,7 @@ static void jtag_vpi_queue_tdi(uint8_t *bits, int nb_bits, enum scan_type scan)
 	printf("jtag_vpi_queue_tdi: (bits=%02x..., nb_bits=%d)\n", bits[0], nb_bits);
 	jtag_vpi_send_cmd(&vpi);
 	jtag_vpi_receive_cmd(&vpi);
+	memcpy(bits, vpi.buffer_in, nb_bytes);
 }
 
 /**
