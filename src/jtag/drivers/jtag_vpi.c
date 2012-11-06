@@ -9,11 +9,34 @@
 
 #include <arpa/inet.h>
 
+#define NO_TAP_SHIFT	0
+#define TAP_SHIFT	1
+
 #define SERVER_PORT	50010
 #define SERVER_ADDRESS	"127.0.0.1"
 
+#define CMD_TMS_SEQ	0
+#define CMD_SCAN_CHAIN	1
+
 int sockfd = 0;
 struct sockaddr_in serv_addr;
+
+struct vpi_cmd {
+	int cmd;
+	unsigned char buffer_out[32];
+	unsigned char buffer_in[32];
+	int length;
+};
+
+static int jtag_vpi_send_cmd(struct vpi_cmd * vpi)
+{
+	return write(sockfd, vpi, sizeof(struct vpi_cmd));
+}
+
+static int jtag_vpi_receive_cmd(struct vpi_cmd * vpi)
+{
+	return read(sockfd, vpi, sizeof(struct vpi_cmd));
+}
 
 static int jtag_vpi_speed(int speed)
 {
@@ -30,6 +53,179 @@ static int jtag_vpi_khz(int khz, int* jtag_speed)
 	return ERROR_OK;
 }
 
+/**
+ * jtag_vpi_reset - ask to reset the JTAG device
+ * @trst: 1 if TRST is to be asserted
+ * @srst: 1 if SRST is to be asserted
+ */
+static void jtag_vpi_reset(int trst, int srst)
+{
+	printf("TODO: !!!!\n");
+}
+
+/**
+ * jtag_vpi_tms_seq - ask a TMS sequence transition to JTAG
+ * @bits: TMS bits to be written (bit0, bit1 .. bitN)
+ * @nb_bits: number of TMS bits (between 1 and 8)
+ *
+ * Write a serie of TMS transitions, where each transition consists in :
+ *  - writing out TCK=0, TMS=<new_state>, TDI=<???>
+ *  - writing out TCK=1, TMS=<new_state>, TDI=<???> which triggers the transition
+ * The function ensures that at the end of the sequence, the clock (TCK) is put
+ * low.
+ */
+static void jtag_vpi_tms_seq(const uint8_t *bits, int nb_bits)
+{
+	struct vpi_cmd vpi;
+	int nb_bytes;
+
+	nb_bytes = (nb_bits / 8) + !!(nb_bits % 8);
+
+	vpi.cmd = CMD_TMS_SEQ;
+	memcpy(vpi.buffer_out, bits, nb_bytes);
+	vpi.length = nb_bytes;
+
+	printf("(bits=%02x..., nb_bits=%d)", bits[0], nb_bits);
+	jtag_vpi_send_cmd(&vpi);
+}
+
+/**
+ * jtag_vpi_path_move - ask a TMS sequence transition to JTAG
+ * @cmd: path transition
+ *
+ * Write a serie of TMS transitions, where each transition consists in :
+ *  - writing out TCK=0, TMS=<new_state>, TDI=<???>
+ *  - writing out TCK=1, TMS=<new_state>, TDI=<???> which triggers the transition
+ * The function ensures that at the end of the sequence, the clock (TCK) is put
+ * low.
+ */
+static void jtag_vpi_path_move(struct pathmove_command *cmd)
+{
+	int i;
+	const uint8_t tms_0 = 0;
+	const uint8_t tms_1 = 1;
+
+	printf("(num_states=%d, last_state=%d)\n",
+		  cmd->num_states, cmd->path[cmd->num_states - 1]);
+
+	for (i = 0; i < cmd->num_states; i++) {
+		if (tap_state_transition(tap_get_state(), false) == cmd->path[i])
+			jtag_vpi_tms_seq(&tms_0, 1);
+		if (tap_state_transition(tap_get_state(), true) == cmd->path[i])
+			jtag_vpi_tms_seq(&tms_1, 1);
+		tap_set_state(cmd->path[i]);
+	}
+}
+
+/**
+ * jtag_vpi_tms - ask a tms command
+ * @cmd: tms command
+ */
+static void jtag_vpi_tms(struct tms_command *cmd)
+{
+	printf("(num_bits=%d)\n", cmd->num_bits);
+	jtag_vpi_tms_seq(cmd->bits, cmd->num_bits);
+}
+
+static void jtag_vpi_state_move(tap_state_t state)
+{
+	uint8_t tms_scan;
+	int tms_len;
+
+	printf("(from %s to %s)\n", tap_state_name(tap_get_state()),
+		  tap_state_name(state));
+
+	if (tap_get_state() == state)
+		return;
+
+	tms_scan = tap_get_tms_path(tap_get_state(), state);
+	tms_len = tap_get_tms_path_len(tap_get_state(), state);
+	jtag_vpi_tms_seq(&tms_scan, tms_len);
+	tap_set_state(state);
+}
+
+/**
+ * jtag_vpi_queue_tdi - short description
+ * @bits: bits to be queued on TDI (or NULL if 0 are to be queued)
+ * @nb_bits: number of bits
+ * @scan: scan type (ie. if TDO read back is required or not)
+ *
+ * Outputs a serie of TDI bits on TDI.
+ * As a side effect, the last TDI bit is sent along a TMS=1, and triggers a JTAG
+ * TAP state shift if input bits were non NULL.
+ *
+ * In order to not saturate the USB Blaster queues, this method reads back TDO
+ * if the scan type requests it, and stores them back in bits.
+ *
+ * As a side note, the state of TCK when entering this function *must* be
+ * low. This is because byteshift mode outputs TDI on rising TCK and reads TDO
+ * on falling TCK if and only if TCK is low before queuing byteshift mode bytes.
+ * If TCK was high, the USB blaster will queue TDI on falling edge, and read TDO
+ * on rising edge !!!
+ */
+static void jtag_vpi_queue_tdi(uint8_t *bits, int nb_bits, enum scan_type scan)
+{
+	struct vpi_cmd vpi;
+	int nb_bytes;
+
+	nb_bytes = (nb_bits / 8) + !!(nb_bits % 8);
+
+	vpi.cmd = CMD_SCAN_CHAIN;
+	memcpy(vpi.buffer_out, bits, nb_bytes);
+	vpi.length = nb_bytes;
+
+	printf("(bits=%02x..., nb_bits=%d)", bits[0], nb_bits);
+	jtag_vpi_send_cmd(&vpi);
+	jtag_vpi_receive_cmd(&vpi);
+}
+
+/**
+ * jtag_vpi_scan - launches a DR-scan or IR-scan
+ * @cmd: the command to launch
+ *
+ * Launch a JTAG IR-scan or DR-scan
+ *
+ * Returns ERROR_OK if OK, ERROR_xxx if a read/write error occured.
+ */
+static int jtag_vpi_scan(struct scan_command *cmd)
+{
+	int scan_bits;
+	uint8_t *buf = NULL;
+	enum scan_type type;
+	int ret = ERROR_OK;
+
+	type = jtag_scan_type(cmd);
+	scan_bits = jtag_build_buffer(cmd, &buf);
+
+	if (cmd->ir_scan)
+		jtag_vpi_state_move(TAP_IRSHIFT);
+	else
+		jtag_vpi_state_move(TAP_DRSHIFT);
+
+	jtag_vpi_queue_tdi(buf, scan_bits, type);
+
+	if(cmd->end_state != TAP_DRSHIFT) {
+		/*
+		 * As our JTAG is in an unstable state (IREXIT1 or DREXIT1), move it
+		 * forward to a stable IRPAUSE or DRPAUSE.
+		 */
+		// ???? ublast_clock_tms(0);
+		if (cmd->ir_scan)
+			tap_set_state(TAP_IRPAUSE);
+		else
+			tap_set_state(TAP_DRPAUSE);
+	}
+
+	ret = jtag_read_buffer(buf, cmd);
+	if (buf)
+		free(buf);
+
+	if(cmd->end_state != TAP_DRSHIFT)
+		jtag_vpi_state_move(cmd->end_state);
+
+	return ret;
+}
+
 static int jtag_vpi_execute_queue(void)
 {
 	struct jtag_command *cmd;
@@ -40,6 +236,7 @@ static int jtag_vpi_execute_queue(void)
 		switch (cmd->type) {
 		case JTAG_RESET:
 			printf("--> JTAG_RESET\n");
+			jtag_vpi_reset(cmd->cmd.reset->trst, cmd->cmd.reset->srst);
 			break;
 		case JTAG_RUNTEST:
 			printf("--> JTAG_RUNTEST\n");
@@ -49,18 +246,22 @@ static int jtag_vpi_execute_queue(void)
 			break;
 		case JTAG_TLR_RESET:
 			printf("--> JTAG_TLR_RESET\n");
+			jtag_vpi_state_move(cmd->cmd.statemove->end_state);
 			break;
 		case JTAG_PATHMOVE:
 			printf("--> JTAG_PATHMOVE\n");
+			jtag_vpi_path_move(cmd->cmd.pathmove);
 			break;
 		case JTAG_TMS:
 			printf("--> JTAG_TMS\n");
+			jtag_vpi_tms(cmd->cmd.tms);
 			break;
 		case JTAG_SLEEP:
 			printf("--> JTAG_SLEEP\n");
 			break;
 		case JTAG_SCAN:
 			printf("--> JTAG_SCAN\n");
+			ret = jtag_vpi_scan(cmd->cmd.scan);
 			break;
 		}
 	}
