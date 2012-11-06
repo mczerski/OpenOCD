@@ -1,7 +1,7 @@
 source [find ./tcl/interface/jtag_vpi.cfg]
 #usb_blaster pin6 1
 #usb_blaster pin8 1
-#source [find ./tcl/target/vjtag.cfg]
+source [find ./tcl/target/or1k.cfg]
 
 #proc fpga_test_init {} {
 
