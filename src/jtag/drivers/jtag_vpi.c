@@ -236,7 +236,7 @@ static int jtag_vpi_scan(struct scan_command *cmd)
 
 static void jtag_vpi_runtest(int cycles, tap_state_t state)
 {
-	DEBUG_JTAG_IO("%s(cycles=%i, end_state=%d)", __func__, cycles, state);
+	printf("jtag_vpi_runtest: (cycles=%i, end_state=%d)\n", cycles, state);
 
 	jtag_vpi_state_move(TAP_IDLE);
 	jtag_vpi_queue_tdi(NULL, cycles, SCAN_OUT);
@@ -245,7 +245,7 @@ static void jtag_vpi_runtest(int cycles, tap_state_t state)
 
 static void jtag_vpi_stableclocks(int cycles)
 {
-	DEBUG_JTAG_IO("%s(cycles=%i)", __func__, cycles);
+	printf("jtag_vpi_stableclocks: (cycles=%i)", cycles);
 	jtag_vpi_queue_tdi(NULL, cycles, SCAN_OUT);
 }
 
@@ -284,6 +284,7 @@ static int jtag_vpi_execute_queue(void)
 			break;
 		case JTAG_SLEEP:
 			printf("--> JTAG_SLEEP\n");
+			jtag_sleep(cmd->cmd.sleep->us);
 			break;
 		case JTAG_SCAN:
 			printf("--> JTAG_SCAN\n");
