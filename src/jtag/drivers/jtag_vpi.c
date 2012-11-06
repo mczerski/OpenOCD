@@ -12,20 +12,22 @@
 #define NO_TAP_SHIFT	0
 #define TAP_SHIFT	1
 
-#define SERVER_PORT	50010
+#define SERVER_PORT	50020
 #define SERVER_ADDRESS	"127.0.0.1"
 
-#define CMD_TMS_SEQ	0
-#define CMD_SCAN_CHAIN	1
+#define CMD_RESET	0
+#define CMD_TMS_SEQ	1
+#define CMD_SCAN_CHAIN	2
 
 int sockfd = 0;
 struct sockaddr_in serv_addr;
 
 struct vpi_cmd {
 	int cmd;
-	unsigned char buffer_out[32];
-	unsigned char buffer_in[32];
+	unsigned char buffer_out[128];
+	unsigned char buffer_in[128];
 	int length;
+	int nb_bits;
 };
 
 static int jtag_vpi_send_cmd(struct vpi_cmd * vpi)
@@ -35,7 +37,7 @@ static int jtag_vpi_send_cmd(struct vpi_cmd * vpi)
 
 static int jtag_vpi_receive_cmd(struct vpi_cmd * vpi)
 {
-	return read(sockfd, vpi, sizeof(struct vpi_cmd));
+	return 0;//read(sockfd, vpi, sizeof(struct vpi_cmd));
 }
 
 static int jtag_vpi_speed(int speed)
@@ -60,7 +62,11 @@ static int jtag_vpi_khz(int khz, int* jtag_speed)
  */
 static void jtag_vpi_reset(int trst, int srst)
 {
-	printf("TODO: !!!!\n");
+	struct vpi_cmd vpi;
+
+	vpi.cmd = CMD_RESET;
+	vpi.length = 0;
+	jtag_vpi_send_cmd(&vpi);
 }
 
 /**
@@ -84,8 +90,8 @@ static void jtag_vpi_tms_seq(const uint8_t *bits, int nb_bits)
 	vpi.cmd = CMD_TMS_SEQ;
 	memcpy(vpi.buffer_out, bits, nb_bytes);
 	vpi.length = nb_bytes;
-
-	printf("(bits=%02x..., nb_bits=%d)", bits[0], nb_bits);
+	vpi.nb_bits = nb_bits;
+	printf("jtag_vpi_tms_seq: (bits=%02x..., nb_bits=%d)\n", bits[0], nb_bits);
 	jtag_vpi_send_cmd(&vpi);
 }
 
@@ -105,7 +111,7 @@ static void jtag_vpi_path_move(struct pathmove_command *cmd)
 	const uint8_t tms_0 = 0;
 	const uint8_t tms_1 = 1;
 
-	printf("(num_states=%d, last_state=%d)\n",
+	printf("jtag_vpi_path_move: (num_states=%d, last_state=%d)\n",
 		  cmd->num_states, cmd->path[cmd->num_states - 1]);
 
 	for (i = 0; i < cmd->num_states; i++) {
@@ -123,7 +129,7 @@ static void jtag_vpi_path_move(struct pathmove_command *cmd)
  */
 static void jtag_vpi_tms(struct tms_command *cmd)
 {
-	printf("(num_bits=%d)\n", cmd->num_bits);
+	printf("jtag_vpi_tms: (num_bits=%d)\n", cmd->num_bits);
 	jtag_vpi_tms_seq(cmd->bits, cmd->num_bits);
 }
 
@@ -132,7 +138,7 @@ static void jtag_vpi_state_move(tap_state_t state)
 	uint8_t tms_scan;
 	int tms_len;
 
-	printf("(from %s to %s)\n", tap_state_name(tap_get_state()),
+	printf("jtag_vpi_state_move: (from %s to %s)\n", tap_state_name(tap_get_state()),
 		  tap_state_name(state));
 
 	if (tap_get_state() == state)
@@ -173,8 +179,9 @@ static void jtag_vpi_queue_tdi(uint8_t *bits, int nb_bits, enum scan_type scan)
 	vpi.cmd = CMD_SCAN_CHAIN;
 	memcpy(vpi.buffer_out, bits, nb_bytes);
 	vpi.length = nb_bytes;
+	vpi.nb_bits = nb_bits;
 
-	printf("(bits=%02x..., nb_bits=%d)", bits[0], nb_bits);
+	printf("jtag_vpi_queue_tdi: (bits=%02x..., nb_bits=%d)\n", bits[0], nb_bits);
 	jtag_vpi_send_cmd(&vpi);
 	jtag_vpi_receive_cmd(&vpi);
 }
