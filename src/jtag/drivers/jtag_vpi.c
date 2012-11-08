@@ -25,8 +25,8 @@ struct sockaddr_in serv_addr;
 
 struct vpi_cmd {
 	int cmd;
-	unsigned char buffer_out[128];
-	unsigned char buffer_in[128];
+	unsigned char buffer_out[512];
+	unsigned char buffer_in[512];
 	int length;
 	int nb_bits;
 };
