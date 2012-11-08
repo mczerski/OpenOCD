@@ -10,8 +10,8 @@ source [find ./tcl/target/or1k.cfg]
 gdb_port 50002
 
 init
-#echo "Halting processor"
-#halt
+echo "Halting processor"
+halt
 
 foreach name [target names] {
     set y [$name cget -endian]
