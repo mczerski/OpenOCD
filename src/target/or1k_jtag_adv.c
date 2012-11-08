@@ -43,7 +43,7 @@
 
 //#define VERBOSE_SLD_NODE
 
-#define ALTERA_VJTAG
+//#define ALTERA_VJTAG
 #define MORE_SPEED_NO_CONTROL
 
 #define MAX_READ_STATUS_WAIT		10
@@ -414,6 +414,7 @@ int adbg_ctrl_write(struct or1k_jtag *jtag_info, unsigned long regidx, uint32_t 
 	data = (opcode & ~(1 << DBG_WB_OPCODE_LEN)) << index_len;  /* MSB must be 0 to access modules */
 	data |= regidx;
 
+	nb_fields = 0;
 	for(i = 0 ; i < length_bits_32; i++) {
 		field[i].num_bits = 32;
 		field[i].out_value = (uint8_t *)&cmd_data[i * 4];
@@ -487,6 +488,7 @@ int adbg_ctrl_read(struct or1k_jtag *jtag_info, unsigned long regidx, uint32_t *
 	databits_32 = databits / 32;
 	spare_bits = databits % 32;
 
+	nb_fields = 0;
 	for(i = 0 ; i < databits_32; i++) {
 		field[i].num_bits = 32;
 		field[i].out_value = (uint8_t *)&outdata;
@@ -631,6 +633,8 @@ retry_read_full:
 	field[0].out_value = NULL;
 	field[0].in_value = (uint8_t *)&status;
 
+
+
 	/* Please ensure the jtag driver used doesn't move the tap when the end state is TAP_DRSHIFT.
 	 * As we are doing polling on DR value, we need to stay in DRSHIFT state. I had to hack the 
 	 * usb_blaster driver to get this behavior.
@@ -656,6 +660,7 @@ retry_read_full:
 
 	in_buffer = malloc(total_size_bytes);
 
+	nb_fields = 0;
 	for (i = 0;i < total_size_32; i++) {
 		field[i].num_bits = 32;
 		field[i].out_value = NULL;
@@ -828,6 +833,7 @@ retry_full_write:
 	memcpy(out_buffer, data, (word_count * word_size_bytes));
 	memcpy(&out_buffer[(word_count * word_size_bytes)], &crc_calc, 4);
 
+	nb_fields = 0;
 	for (i = 0;i < total_size_32; i++) {
 		field[i].num_bits = 32;
 		field[i].out_value = &out_buffer[i * 4];
