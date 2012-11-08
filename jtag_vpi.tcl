@@ -7,7 +7,7 @@ source [find ./tcl/target/or1k.cfg]
 
 #}
 
-gdb_port 50001
+gdb_port 50002
 
 init
 #echo "Halting processor"
