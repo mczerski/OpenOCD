@@ -33,13 +33,14 @@
 #define NO_TAP_SHIFT	0
 #define TAP_SHIFT	1
 
-#define SERVER_PORT	50020
 #define SERVER_ADDRESS	"127.0.0.1"
 
 #define CMD_RESET		0
 #define CMD_TMS_SEQ		1
 #define CMD_SCAN_CHAIN		2
 #define CMD_SCAN_CHAIN_FLIP_TMS	3
+
+int server_port = 500020;
 
 int sockfd = 0;
 struct sockaddr_in serv_addr;
@@ -345,17 +346,17 @@ static int jtag_vpi_init(void)
 	memset(&serv_addr, 0, sizeof(serv_addr));
 
 	serv_addr.sin_family = AF_INET;
-	serv_addr.sin_port = htons(SERVER_PORT);
+	serv_addr.sin_port = htons(server_port);
 
 	if (inet_pton(AF_INET, SERVER_ADDRESS, &serv_addr.sin_addr) <= 0) {
 		printf("\n inet_pton error occured\n");
 		return ERROR_FAIL;
 	}
 
-	printf("Connection to %s : %u ", SERVER_ADDRESS, SERVER_PORT);
+	printf("Connection to %s : %u ", SERVER_ADDRESS, server_port);
 	if (connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
 		printf("failed\n");
-		return ERROR_FAIL;
+		return ERROR_COMMAND_CLOSE_CONNECTION;
 	}
 
 	printf("succeed\n");
@@ -372,9 +373,15 @@ static int jtag_vpi_quit(void)
 	return ERROR_OK;
 }
 
-COMMAND_HANDLER(jtag_vpi_handle_test)
+COMMAND_HANDLER(jtag_vpi_set_port)
 {
-	printf("--> jtag_vpi_handle_test\n");
+	if (CMD_ARGC == 0) {
+		LOG_WARNING("You need to set a port number");
+	} else {
+		COMMAND_PARSE_NUMBER(int, CMD_ARGV[0], server_port);
+	}
+
+	printf("Set server port to %u\n", server_port);
 
 	return ERROR_OK;
 }
@@ -382,10 +389,10 @@ COMMAND_HANDLER(jtag_vpi_handle_test)
 
 static const struct command_registration jtag_vpi_command_handlers[] = {
 	{
-		.name = "jtag_vpi_handle_test",
-		.handler = &jtag_vpi_handle_test,
+		.name = "jtag_vpi_set_port",
+		.handler = &jtag_vpi_set_port,
 		.mode = COMMAND_CONFIG,
-		.help = "set the USB device description of the FTDI FT2232 device",
+		.help = "set the port of the VPi server",
 		.usage = "description_string",
 	},
 	COMMAND_REGISTRATION_DONE
