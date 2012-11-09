@@ -43,7 +43,7 @@
 
 //#define VERBOSE_SLD_NODE
 
-//#define ALTERA_VJTAG
+#define ALTERA_VJTAG
 #define MORE_SPEED_NO_CONTROL
 
 #define MAX_READ_STATUS_WAIT		10
