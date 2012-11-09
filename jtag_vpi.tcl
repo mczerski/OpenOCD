@@ -1,7 +1,4 @@
 source [find ./tcl/interface/jtag_vpi.cfg]
-
-jtag_vpi_set_port 50020
-
 source [find ./tcl/target/or1k.cfg]
 
 gdb_port 50002
