@@ -19,7 +19,11 @@ included.
 
 If you want to use the VPI JTAG driver, you need to configure OpenOCD like this:
 
-./configure --enable-jtag_vpi --enable-adv_debug_sys --enable-maintainer-mode
+    ./configure --enable-jtag_vpi --enable-adv_debug_sys --enable-maintainer-mode
 
+Then you can start OpenOCD:
 
+    ./src/openocd -f jtag_vpi.tcl
+
+The JTAG VPI server (on the simulation side) has to be started before OpenOCD.
 
