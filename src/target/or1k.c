@@ -487,16 +487,18 @@ static int or1k_resume_or_step(struct target *target, int current,
 
 	resume_pc = buf_get_u32(or1k->core_cache->reg_list[OR1K_REG_NPC].value,
 				0, 32);
-	or1k_restore_context(target);
+	if (!step) {
+		or1k_restore_context(target);
 
-	h_u32_to_be((uint8_t*) &resume_pc_be, resume_pc);
+		h_u32_to_be((uint8_t*) &resume_pc_be, resume_pc);
 
-	/* Last, write the NPC, again */
-	or1k_jtag_write_cpu(&or1k->jtag,
-			    /* NPC's address */
-			    or1k_core_reg_list_arch_info[OR1K_REG_NPC].spr_num,
-			    /* What it should be set to */
-			    resume_pc_be);
+		/* Last, write the NPC, again */
+		or1k_jtag_write_cpu(&or1k->jtag,
+				/* NPC's address */
+				or1k_core_reg_list_arch_info[OR1K_REG_NPC].spr_num,
+				/* What it should be set to */
+				resume_pc_be);
+	}
 
 	uint32_t regval;
 	regval = 0;
@@ -512,9 +514,9 @@ static int or1k_resume_or_step(struct target *target, int current,
 	or1k_jtag_read_cpu(&or1k->jtag, OR1K_DMR1_CPU_REG_ADD, &regval);
 	h_u32_to_be((uint8_t*) &regval, regval);
 	if (step)
-		regval |= OR1K_DMR1_ST;
+		regval |= OR1K_DMR1_ST | OR1K_DMR1_BT;
 	else
-		regval &= ~OR1K_DMR1_ST;
+		regval &= ~(OR1K_DMR1_ST | OR1K_DMR1_BT);
 
 	h_u32_to_be((uint8_t*) &regval, regval);
 	or1k_jtag_write_cpu(&or1k->jtag, OR1K_DMR1_CPU_REG_ADD, regval);
@@ -633,6 +635,13 @@ static int or1k_add_breakpoint(struct target *target,
 				breakpoint->address , 
 				 1,
 				 (uint32_t*)&or1k_trap_insn);
+
+	/* invalidate instruction cache */
+	uint32_t icbir_val;
+	h_u32_to_be((uint8_t*) &icbir_val, breakpoint->address);
+	or1k_jtag_write_cpu(&or1k->jtag,
+			OR1K_ICBIR_CPU_REG_ADD, icbir_val);
+
 	return ERROR_OK;
 }
 
@@ -654,7 +663,13 @@ static int or1k_remove_breakpoint(struct target *target,
 				breakpoint->address , 
 				 1,
 				 (uint32_t*)breakpoint->orig_instr);
-	
+
+	/* invalidate instruction cache */
+	uint32_t icbir_val;
+	h_u32_to_be((uint8_t*) &icbir_val, breakpoint->address);
+	or1k_jtag_write_cpu(&or1k->jtag,
+			OR1K_ICBIR_CPU_REG_ADD, icbir_val);
+
 	return ERROR_OK;
 }
 
