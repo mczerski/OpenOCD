@@ -43,7 +43,6 @@
 
 //#define VERBOSE_SLD_NODE
 
-#define ALTERA_VJTAG
 #define MORE_SPEED_NO_CONTROL
 
 #define MAX_READ_STATUS_WAIT		10
@@ -61,7 +60,7 @@ static int or1k_jtag_module_selected = -1;
  */
 unsigned long current_reg_idx[DBG_MAX_MODULES];
 
-#ifdef ALTERA_VJTAG
+#if (ALTERA_VJTAG == 1)
 #ifdef VERBOSE_SLD_NODE
 static char * id_to_string(unsigned char id)
 {
@@ -110,7 +109,7 @@ int or1k_jtag_init(struct or1k_jtag *jtag_info)
 	union node_info node;
 	struct scan_field field;
 	struct jtag_tap *tap;
-#ifdef ALTERA_VJTAG
+#if (ALTERA_VJTAG == 1)
 	int i;
 	int node_index;
 	int vjtag_node_address = 0;
@@ -125,7 +124,7 @@ int or1k_jtag_init(struct or1k_jtag *jtag_info)
 	hub.dword = 0;
 	node.dword = 0;
 
-#ifdef ALTERA_VJTAG
+#if (ALTERA_VJTAG == 1)
 	LOG_DEBUG("Initialising Altera Virtual JTAG TAP for Advanced Debug Interface");
 
 	/* Ensure TAP is reset - maybe not necessary*/

@@ -398,6 +398,10 @@ AC_ARG_ENABLE(adv_debug_sys,
   AS_HELP_STRING([--enable-adv_debug_sys], [Enable building support for the OpenCores Advanced Debug System. Default is Mohor Debug System]),
   [build_adv_debug_sys=$enableval], [build_adv_debug_sys=no])
 
+AC_ARG_ENABLE(altera_vjtag,
+  AS_HELP_STRING([--enable-altera_vjtag], [Enable building support for Altera Virtual JTAG in the adv_debug_sys]),
+  [build_altera_vjtag=$enableval], [build_altera_vjtag=no])
+
 AC_ARG_ENABLE(usb_blaster_libftdi,
   AS_HELP_STRING([--enable-usb_blaster_libftdi], [Enable building support for the Altera USB-Blaster using the libftdi driver, opensource alternate of FTD2XX]),
   [build_usb_blaster_libftdi=$enableval], [build_usb_blaster_libftdi=no])
@@ -690,6 +694,12 @@ if test $build_adv_debug_sys = yes; then
   AC_DEFINE(BUILD_ADV_DEBUG_SYS, 1, [1 if you want adv_debug_sys.])
 else
   AC_DEFINE(BUILD_ADV_DEBUG_SYS, 0, [0 if you don't want adv_debug_sys.])
+fi
+
+if test $build_altera_vjtag = yes; then
+  AC_DEFINE(ALTERA_VJTAG, 1, [1 if you want altera vjtag.])
+else
+  AC_DEFINE(ALTERA_VJTAG, 0, [0 if you don't want altera vjtag.])
 fi
 
 if test $build_usb_blaster_libftdi = yes; then
@@ -1088,6 +1098,7 @@ AM_CONDITIONAL(USB_BLASTER_LIBFTDI, test $build_usb_blaster_libftdi = yes)
 AM_CONDITIONAL(USB_BLASTER_DRIVER, test $build_usb_blaster_ftd2xx = yes -o $build_usb_blaster_libftdi = yes)
 AM_CONDITIONAL(JTAG_VPI, test $build_jtag_vpi = yes -o $build_jtag_vpi = yes)
 AM_CONDITIONAL(ADV_DEBUG_SYS, test $build_adv_debug_sys = yes -o $build_adv_debug_sys = yes)
+AM_CONDITIONAL(ALTERA_VJTAG, test $build_altera_vjtag = yes -o $build_altera_vjtag = yes)
 AM_CONDITIONAL(AMTJTAGACCEL, test $build_amtjtagaccel = yes)
 AM_CONDITIONAL(GW16012, test $build_gw16012 = yes)
 AM_CONDITIONAL(PRESTO_LIBFTDI, test $build_presto_libftdi = yes)
