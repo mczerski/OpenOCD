@@ -200,14 +200,21 @@ static void jtag_vpi_queue_tdi(uint8_t *bits, int nb_bits, enum scan_type scan, 
 	nb_bytes = (nb_bits / 8) + !!(nb_bits % 8);
 
 	vpi.cmd = tap_shift ? CMD_SCAN_CHAIN_FLIP_TMS : CMD_SCAN_CHAIN;
-	memcpy(vpi.buffer_out, bits, nb_bytes);
+
+	if (bits)
+		memcpy(vpi.buffer_out, bits, nb_bytes);
+	else
+		memset(vpi.buffer_out, 0xff, nb_bytes);
+
 	vpi.length = nb_bytes;
 	vpi.nb_bits = nb_bits;
 
 	LOG_DEBUG("jtag_vpi_queue_tdi: (bits=%02x..., nb_bits=%d)", bits[0], nb_bits);
 	jtag_vpi_send_cmd(&vpi);
 	jtag_vpi_receive_cmd(&vpi);
-	memcpy(bits, vpi.buffer_in, nb_bytes);
+
+	if (bits)
+		memcpy(bits, vpi.buffer_in, nb_bytes);
 }
 
 /**
