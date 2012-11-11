@@ -175,7 +175,7 @@ static void jtag_vpi_state_move(tap_state_t state)
 	tap_set_state(state);
 }
 
-static void jtag_vpi_queue_tdi_xfer(uint8_t *bits, int nb_bits, enum scan_type scan, int tap_shift)
+static void jtag_vpi_queue_tdi_xfer(uint8_t *bits, int nb_bits, int tap_shift)
 {
 	struct vpi_cmd vpi;
 	int nb_bytes;
@@ -219,7 +219,7 @@ static void jtag_vpi_queue_tdi_xfer(uint8_t *bits, int nb_bits, enum scan_type s
  * If TCK was high, the USB blaster will queue TDI on falling edge, and read TDO
  * on rising edge !!!
  */
-static void jtag_vpi_queue_tdi(uint8_t *bits, int nb_bits, enum scan_type scan, int tap_shift)
+static void jtag_vpi_queue_tdi(uint8_t *bits, int nb_bits, int tap_shift)
 {
 	int nb_xfer = (nb_bits / (XFERT_MAX_SIZE * 8)) + !!(nb_bits % (XFERT_MAX_SIZE * 8));
 	uint8_t * xmit_buffer = bits;
@@ -229,9 +229,9 @@ static void jtag_vpi_queue_tdi(uint8_t *bits, int nb_bits, enum scan_type scan, 
 	while (nb_xfer) {
 
 		if (nb_xfer ==  1)
-			jtag_vpi_queue_tdi_xfer(&xmit_buffer[i], xmit_nb_bits, scan, tap_shift);
+			jtag_vpi_queue_tdi_xfer(&xmit_buffer[i], xmit_nb_bits, tap_shift);
 		else {
-			jtag_vpi_queue_tdi_xfer(&xmit_buffer[i], XFERT_MAX_SIZE * 8, scan, NO_TAP_SHIFT);
+			jtag_vpi_queue_tdi_xfer(&xmit_buffer[i], XFERT_MAX_SIZE * 8, NO_TAP_SHIFT);
 			xmit_nb_bits -= XFERT_MAX_SIZE * 8;
 			i += XFERT_MAX_SIZE;
 		}
@@ -267,10 +267,8 @@ static int jtag_vpi_scan(struct scan_command *cmd)
 {
 	int scan_bits;
 	uint8_t *buf = NULL;
-	enum scan_type type;
 	int ret = ERROR_OK;
 
-	type = jtag_scan_type(cmd);
 	scan_bits = jtag_build_buffer(cmd, &buf);
 
 	if (cmd->ir_scan)
@@ -279,9 +277,9 @@ static int jtag_vpi_scan(struct scan_command *cmd)
 		jtag_vpi_state_move(TAP_DRSHIFT);
 
 	if(cmd->end_state == TAP_DRSHIFT)
-		jtag_vpi_queue_tdi(buf, scan_bits, type, NO_TAP_SHIFT);
+		jtag_vpi_queue_tdi(buf, scan_bits, NO_TAP_SHIFT);
 	else
-		jtag_vpi_queue_tdi(buf, scan_bits, type, TAP_SHIFT);
+		jtag_vpi_queue_tdi(buf, scan_bits, TAP_SHIFT);
 
 	if(cmd->end_state != TAP_DRSHIFT) {
 		/*
@@ -310,14 +308,14 @@ static void jtag_vpi_runtest(int cycles, tap_state_t state)
 	LOG_DEBUG("jtag_vpi_runtest: (cycles=%i, end_state=%d)", cycles, state);
 
 	jtag_vpi_state_move(TAP_IDLE);
-	jtag_vpi_queue_tdi(NULL, cycles, SCAN_OUT, TAP_SHIFT);
+	jtag_vpi_queue_tdi(NULL, cycles, TAP_SHIFT);
 	jtag_vpi_state_move(state);
 }
 
 static void jtag_vpi_stableclocks(int cycles)
 {
 	LOG_DEBUG("jtag_vpi_stableclocks: (cycles=%i)", cycles);
-	jtag_vpi_queue_tdi(NULL, cycles, SCAN_OUT, TAP_SHIFT);
+	jtag_vpi_queue_tdi(NULL, cycles, TAP_SHIFT);
 }
 
 static int jtag_vpi_execute_queue(void)
