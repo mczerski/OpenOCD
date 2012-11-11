@@ -35,7 +35,7 @@
 
 #define SERVER_ADDRESS	"127.0.0.1"
 
-#define	XFERT_MAX_SIZE		64
+#define	XFERT_MAX_SIZE		512
 
 #define CMD_RESET		0
 #define CMD_TMS_SEQ		1
