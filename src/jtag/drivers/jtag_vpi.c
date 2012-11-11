@@ -204,20 +204,6 @@ static void jtag_vpi_queue_tdi_xfer(uint8_t *bits, int nb_bits, int tap_shift)
  * jtag_vpi_queue_tdi - short description
  * @bits: bits to be queued on TDI (or NULL if 0 are to be queued)
  * @nb_bits: number of bits
- * @scan: scan type (ie. if TDO read back is required or not)
- *
- * Outputs a serie of TDI bits on TDI.
- * As a side effect, the last TDI bit is sent along a TMS=1, and triggers a JTAG
- * TAP state shift if input bits were non NULL.
- *
- * In order to not saturate the USB Blaster queues, this method reads back TDO
- * if the scan type requests it, and stores them back in bits.
- *
- * As a side note, the state of TCK when entering this function *must* be
- * low. This is because byteshift mode outputs TDI on rising TCK and reads TDO
- * on falling TCK if and only if TCK is low before queuing byteshift mode bytes.
- * If TCK was high, the USB blaster will queue TDI on falling edge, and read TDO
- * on rising edge !!!
  */
 static void jtag_vpi_queue_tdi(uint8_t *bits, int nb_bits, int tap_shift)
 {
