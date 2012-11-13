@@ -17,6 +17,7 @@
 *   Free Software Foundation, Inc.,                                       *
 *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
 ***************************************************************************/
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -25,102 +26,50 @@
 #include "bitq.h"
 #include <jtag/interface.h>
 
-
-struct bitq_interface* bitq_interface;       /* low level bit queue interface */
+struct bitq_interface *bitq_interface; /* low level bit queue interface */
 
 /* state of input queue */
 struct bitq_state {
 	struct jtag_command *cmd; /* command currently processed */
 	int field_idx; /* index of field currently being processed */
-	int bit_pos; /* position of bit curently being processed */
+	int bit_pos; /* position of bit currently being processed */
 	int status; /* processing status */
 };
 static struct bitq_state bitq_in_state;
 
-static uint8_t* bitq_in_buffer;                     /* buffer dynamically reallocated as needed */
-static int     bitq_in_bufsize = 32; /* min. buffer size */
-
 /*
  * input queue processing does not use jtag_read_buffer() to avoid unnecessary overhead
- * also the buffer for incomming data is reallocated only if necessary
  * no parameters, makes use of stored state information
  */
-void bitq_in_proc(void)
+static void bitq_in_proc(void)
 {
-	/* static information preserved between calls to increase performance */
-	static uint8_t*    in_buff;  /* pointer to buffer for scanned data */
-	static int    in_idx;   /* index of byte being scanned */
-	static uint8_t     in_mask;  /* mask of next bit to be scanned */
-
-	struct scan_field* field;
-	int           tdo;
-
 	/* loop through the queue */
-	while (bitq_in_state.cmd)
-	{
+	while (bitq_in_state.cmd) {
 		/* only JTAG_SCAN command may return data */
-		if (bitq_in_state.cmd->type == JTAG_SCAN)
-		{
+		if (bitq_in_state.cmd->type == JTAG_SCAN) {
 			/* loop through the fields */
-			while (bitq_in_state.field_idx < bitq_in_state.cmd->cmd.scan->num_fields)
-			{
+			while (bitq_in_state.field_idx < bitq_in_state.cmd->cmd.scan->num_fields) {
+				struct scan_field *field;
 				field = &bitq_in_state.cmd->cmd.scan->fields[bitq_in_state.field_idx];
-				if (field->in_value)
-				{
-					if (bitq_in_state.bit_pos == 0)
-					{
-						/* initialize field scanning */
-						in_mask = 0x01;
-						in_idx  = 0;
-						if (field->in_value)
-							in_buff = field->in_value;
-						else
-						{
-							/* buffer reallocation needed? */
-							if (field->num_bits > bitq_in_bufsize * 8)
-							{
-								/* buffer previously allocated? */
-								if (bitq_in_buffer != NULL)
-								{
-									/* free it */
-									free(bitq_in_buffer);
-									bitq_in_buffer = NULL;
-								}
-								/* double the buffer size until it fits */
-								while (field->num_bits > bitq_in_bufsize * 8)
-									bitq_in_bufsize *= 2;
-							}
-							/* if necessary, allocate buffer and check for malloc error */
-							if (bitq_in_buffer == NULL && (bitq_in_buffer = malloc(bitq_in_bufsize)) == NULL)
-							{
-								LOG_ERROR("malloc error");
-								exit(-1);
-							}
-							in_buff = (void*) bitq_in_buffer;
-						}
-					}
-
+				if (field->in_value) {
 					/* field scanning */
-					while (bitq_in_state.bit_pos < field->num_bits)
-					{
-						if ((tdo = bitq_interface->in()) < 0)
-						{
+					while (bitq_in_state.bit_pos < field->num_bits) {
+						/* index of byte being scanned */
+						int in_idx = bitq_in_state.bit_pos / 8;
+						/* mask of next bit to be scanned */
+						uint8_t in_mask = 1 << (bitq_in_state.bit_pos % 8);
+
+						int tdo = bitq_interface->in();
+						if (tdo < 0) {
 #ifdef _DEBUG_JTAG_IO_
 							LOG_DEBUG("bitq in EOF");
 #endif
 							return;
 						}
 						if (in_mask == 0x01)
-							in_buff[in_idx] = 0;
+							field->in_value[in_idx] = 0;
 						if (tdo)
-							in_buff[in_idx] |= in_mask;
-						if (in_mask == 0x80)
-						{
-							in_mask = 0x01;
-							in_idx++;
-						}
-						else
-							in_mask <<= 1;
+							field->in_value[in_idx] |= in_mask;
 						bitq_in_state.bit_pos++;
 					}
 				}
@@ -134,8 +83,7 @@ void bitq_in_proc(void)
 	}
 }
 
-
-void bitq_io(int tms, int tdi, int tdo_req)
+static void bitq_io(int tms, int tdi, int tdo_req)
 {
 	bitq_interface->out(tms, tdi, tdo_req);
 	/* check and process the input queue */
@@ -143,34 +91,29 @@ void bitq_io(int tms, int tdi, int tdo_req)
 		bitq_in_proc();
 }
 
-
-void bitq_end_state(tap_state_t state)
+static void bitq_end_state(tap_state_t state)
 {
-	if (!tap_is_state_stable(state))
-	{
+	if (!tap_is_state_stable(state)) {
 		LOG_ERROR("BUG: %i is not a valid end state", state);
 		exit(-1);
 	}
 	tap_set_end_state(state);
 }
 
-
-void bitq_state_move(tap_state_t new_state)
+static void bitq_state_move(tap_state_t new_state)
 {
 	int i = 0;
 	uint8_t  tms_scan;
 
-	if (!tap_is_state_stable(tap_get_state()) || !tap_is_state_stable(new_state))
-	{
+	if (!tap_is_state_stable(tap_get_state()) || !tap_is_state_stable(new_state)) {
 		LOG_ERROR("TAP move from or to unstable state");
 		exit(-1);
 	}
 
 	tms_scan = tap_get_tms_path(tap_get_state(), new_state);
-	int tms_count = tap_get_tms_path_len(tap_get_state(), tap_get_end_state());
+	int tms_count = tap_get_tms_path_len(tap_get_state(), new_state);
 
-	for (i = 0; i < tms_count; i++)
-	{
+	for (i = 0; i < tms_count; i++) {
 		bitq_io(tms_scan & 1, 0, 0);
 		tms_scan >>= 1;
 	}
@@ -178,19 +121,16 @@ void bitq_state_move(tap_state_t new_state)
 	tap_set_state(new_state);
 }
 
-
-void bitq_path_move(struct pathmove_command* cmd)
+static void bitq_path_move(struct pathmove_command *cmd)
 {
 	int i;
 
-	for (i = 0; i <= cmd->num_states; i++)
-	{
+	for (i = 0; i <= cmd->num_states; i++) {
 		if (tap_state_transition(tap_get_state(), false) == cmd->path[i])
 			bitq_io(0, 0, 0);
 		else if (tap_state_transition(tap_get_state(), true) == cmd->path[i])
 			bitq_io(1, 0, 0);
-		else
-		{
+		else {
 			LOG_ERROR("BUG: %s -> %s isn't a valid TAP transition", tap_state_name(
 							 tap_get_state()), tap_state_name(cmd->path[i]));
 			exit(-1);
@@ -202,8 +142,7 @@ void bitq_path_move(struct pathmove_command* cmd)
 	tap_set_end_state(tap_get_state());
 }
 
-
-void bitq_runtest(int num_cycles)
+static void bitq_runtest(int num_cycles)
 {
 	int i;
 
@@ -220,13 +159,12 @@ void bitq_runtest(int num_cycles)
 		bitq_state_move(tap_get_end_state());
 }
 
-
-void bitq_scan_field(struct scan_field* field, int do_pause)
+static void bitq_scan_field(struct scan_field *field, int do_pause)
 {
 	int bit_cnt;
 	int tdo_req;
 
-	const uint8_t* out_ptr;
+	const uint8_t *out_ptr;
 	uint8_t  out_mask;
 
 	if (field->in_value)
@@ -234,36 +172,29 @@ void bitq_scan_field(struct scan_field* field, int do_pause)
 	else
 		tdo_req = 0;
 
-	if (field->out_value == NULL)
-	{
+	if (field->out_value == NULL) {
 		/* just send zeros and request data from TDO */
 		for (bit_cnt = field->num_bits; bit_cnt > 1; bit_cnt--)
 			bitq_io(0, 0, tdo_req);
 
 		bitq_io(do_pause, 0, tdo_req);
-	}
-	else
-	{
+	} else {
 		/* send data, and optionally request TDO */
 		out_mask = 0x01;
 		out_ptr  = field->out_value;
-		for (bit_cnt = field->num_bits; bit_cnt > 1; bit_cnt--)
-		{
+		for (bit_cnt = field->num_bits; bit_cnt > 1; bit_cnt--) {
 			bitq_io(0, ((*out_ptr) & out_mask) != 0, tdo_req);
-			if (out_mask == 0x80)
-			{
+			if (out_mask == 0x80) {
 				out_mask = 0x01;
 				out_ptr++;
-			}
-			else
+			} else
 				out_mask <<= 1;
 		}
 
 		bitq_io(do_pause, ((*out_ptr) & out_mask) != 0, tdo_req);
 	}
 
-	if (do_pause)
-	{
+	if (do_pause) {
 		bitq_io(0, 0, 0);
 		if (tap_get_state() == TAP_IRSHIFT)
 			tap_set_state(TAP_IRPAUSE);
@@ -272,8 +203,7 @@ void bitq_scan_field(struct scan_field* field, int do_pause)
 	}
 }
 
-
-void bitq_scan(struct scan_command* cmd)
+static void bitq_scan(struct scan_command *cmd)
 {
 	int i;
 
@@ -288,28 +218,25 @@ void bitq_scan(struct scan_command* cmd)
 	bitq_scan_field(&cmd->fields[i], 1);
 }
 
-
 int bitq_execute_queue(void)
 {
-	struct jtag_command* cmd = jtag_command_queue; /* currently processed command */
+	struct jtag_command *cmd = jtag_command_queue; /* currently processed command */
 
 	bitq_in_state.cmd = jtag_command_queue;
 	bitq_in_state.field_idx = 0;
 	bitq_in_state.bit_pos   = 0;
 	bitq_in_state.status    = ERROR_OK;
 
-	while (cmd)
-	{
-		switch (cmd->type)
-		{
+	while (cmd) {
+		switch (cmd->type) {
 		case JTAG_RESET:
 #ifdef _DEBUG_JTAG_IO_
 			LOG_DEBUG("reset trst: %i srst %i", cmd->cmd.reset->trst, cmd->cmd.reset->srst);
 #endif
-			if ((cmd->cmd.reset->trst == 1) || (cmd->cmd.reset->srst && (jtag_get_reset_config() & RESET_SRST_PULLS_TRST)))
-			{
+			if ((cmd->cmd.reset->trst == 1) ||
+					(cmd->cmd.reset->srst &&
+					(jtag_get_reset_config() & RESET_SRST_PULLS_TRST)))
 				tap_set_state(TAP_RESET);
-			}
 			bitq_interface->reset(cmd->cmd.reset->trst, cmd->cmd.reset->srst);
 			if (bitq_interface->in_rdy())
 				bitq_in_proc();
@@ -373,13 +300,11 @@ int bitq_execute_queue(void)
 	bitq_interface->flush();
 	bitq_in_proc();
 
-	if (bitq_in_state.cmd)
-	{
+	if (bitq_in_state.cmd) {
 		LOG_ERROR("missing data from bitq interface");
 		return ERROR_JTAG_QUEUE_FAILED;
 	}
-	if (bitq_interface->in() >= 0)
-	{
+	if (bitq_interface->in() >= 0) {
 		LOG_ERROR("extra data from bitq interface");
 		return ERROR_JTAG_QUEUE_FAILED;
 	}
@@ -387,12 +312,6 @@ int bitq_execute_queue(void)
 	return bitq_in_state.status;
 }
 
-
 void bitq_cleanup(void)
 {
-	if (bitq_in_buffer != NULL)
-	{
-		free(bitq_in_buffer);
-		bitq_in_buffer = NULL;
-	}
 }

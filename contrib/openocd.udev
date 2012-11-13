@@ -1,9 +1,11 @@
 ACTION!="add|change", GOTO="openocd_rules_end"
-SUBSYSTEM!="usb", GOTO="openocd_rules_end"
-ENV{DEVTYPE}!="usb_device", GOTO="openocd_rules_end"
+SUBSYSTEM!="usb|tty", GOTO="openocd_rules_end"
 
 # Olimex ARM-USB-OCD
 ATTRS{idVendor}=="15ba", ATTRS{idProduct}=="0003", MODE="664", GROUP="plugdev"
+
+# Olimex ARM-USB-OCD-H
+ATTRS{idVendor}=="15ba", ATTRS{idProduct}=="002b", MODE="664", GROUP="plugdev"
 
 # Olimex ARM-USB-OCD-TINY
 ATTRS{idVendor}=="15ba", ATTRS{idProduct}=="0004", MODE="664", GROUP="plugdev"
@@ -28,9 +30,11 @@ ATTRS{idVendor}=="0fbb", ATTRS{idProduct}=="1000", MODE="664", GROUP="plugdev"
 # TinCanTools Flyswatter
 # OOCD-Link
 # Marvell Sheevaplug (early development versions)
+# DLP Design DLP-USB1232H USB-to-UART/FIFO interface module
 ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6010", MODE="664", GROUP="plugdev"
 
 # Calao Systems USB-A9260-C02
+# Bus Pirate
 ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", MODE="664", GROUP="plugdev"
 
 # IAR J-Link USB
@@ -67,5 +71,19 @@ ATTRS{idVendor}=="0403", ATTRS{idProduct}=="c141", MODE="664", GROUP="plugdev"
 # Hilscher NXHX Boards
 ATTRS{idVendor}=="0640", ATTRS{idProduct}=="0028", MODE="664", GROUP="plugdev"
 
-LABEL="openocd_rules_end"
+# Debug Board for Neo1973
+ATTRS{idVendor}=="1457", ATTRS{idProduct}=="5118", MODE="664", GROUP="plugdev"
 
+# XDS100v2
+ATTRS{idVendor}=="0403", ATTRS{idProduct}=="a6d0", MODE="664", GROUP="plugdev"
+
+# stlink v1
+ATTRS{idVendor}=="0483", ATTRS{idProduct}=="3744", MODE="664", GROUP="plugdev"
+
+# stlink v2
+ATTRS{idVendor}=="0483", ATTRS{idProduct}=="3748", MODE="664", GROUP="plugdev"
+
+# opendous and estick
+ATTRS{idVendor}=="03eb", ATTRS{idProduct}=="204f", MODE="664", GROUP="plugdev"
+
+LABEL="openocd_rules_end"

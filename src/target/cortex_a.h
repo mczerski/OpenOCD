@@ -26,6 +26,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
+
 #ifndef CORTEX_A8_H
 #define CORTEX_A8_H
 
@@ -44,8 +45,7 @@
 
 #define CORTEX_A8_PADDRDBG_CPU_SHIFT 13
 
-struct cortex_a8_brp
-{
+struct cortex_a8_brp {
 	int used;
 	int type;
 	uint32_t value;
@@ -53,8 +53,7 @@ struct cortex_a8_brp
 	uint8_t BRPn;
 };
 
-struct cortex_a8_common
-{
+struct cortex_a8_common {
 	int common_magic;
 	struct arm_jtag jtag_info;
 
@@ -63,6 +62,10 @@ struct cortex_a8_common
 
 	/* Saved cp15 registers */
 	uint32_t cp15_control_reg;
+	/* latest cp15 register value written and cpsr processor mode */
+	uint32_t cp15_control_reg_curr;
+	enum arm_mode curr_mode;
+
 
 	/* Breakpoint register pairs */
 	int brp_num_context;
@@ -73,17 +76,14 @@ struct cortex_a8_common
 	/* Use cortex_a8_read_regs_through_mem for fast register reads */
 	int fast_reg_read;
 
-	/* Flag that helps to resolve what ttb to use: user or kernel */
-	int current_address_mode;
-
 	struct armv7a_common armv7a_common;
+
 };
 
 static inline struct cortex_a8_common *
 target_to_cortex_a8(struct target *target)
 {
-	return container_of(target->arch_info, struct cortex_a8_common,
-			armv7a_common.armv4_5_common);
+	return container_of(target->arch_info, struct cortex_a8_common, armv7a_common.arm);
 }
 
 #endif /* CORTEX_A8_H */

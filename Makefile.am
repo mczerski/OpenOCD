@@ -3,7 +3,7 @@
 AUTOMAKE_OPTIONS = gnu 1.6
 
 # make sure we pass the correct jimtcl flags to distcheck
-DISTCHECK_CONFIGURE_FLAGS = --with-jim-ext=nvp --disable-lineedit --disable-install-jim
+DISTCHECK_CONFIGURE_FLAGS = --disable-install-jim
 
 nobase_dist_pkgdata_DATA = \
 	contrib/libdcc/dcc_stdio.c \
@@ -24,7 +24,6 @@ EXTRA_DIST = \
 	BUGS \
 	HACKING \
 	NEWTAPS \
-	PATCHES.txt \
 	README.Win32 \
 	Doxyfile.in \
 	tools/logger.pl \
@@ -64,10 +63,13 @@ $(THE_MANUAL): %.pdf: %.tex
 
 TCL_PATH = tcl
 # command to find paths of script files, relative to TCL_PATH
-TCL_FILES = find $(srcdir)/$(TCL_PATH) -name '*.cfg' -o -name '*.tcl' | \
+TCL_FILES = find $(srcdir)/$(TCL_PATH) -name '*.cfg' -o -name '*.tcl' -o -name '*.txt' | \
 		sed -e 's,^$(srcdir)/$(TCL_PATH),,'
 
 dist-hook:
+	if test -d $(srcdir)/.git -a \( ! -e $(distdir)/ChangeLog -o -w $(distdir)/ChangeLog \) ; then \
+		git --git-dir $(srcdir)/.git log | $(srcdir)/tools/git2cl/git2cl > $(distdir)/ChangeLog ; \
+	fi
 	for i in $$($(TCL_FILES)); do \
 		j="$(distdir)/$(TCL_PATH)/$$i" && \
 		mkdir -p "$$(dirname $$j)" && \

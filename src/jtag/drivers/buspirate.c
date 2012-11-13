@@ -44,7 +44,6 @@ static void buspirate_runtest(int num_cycles);
 static void buspirate_scan(bool ir_scan, enum scan_type type,
 	uint8_t *buffer, int scan_size, struct scan_command *command);
 
-
 #define CMD_UNKNOWN       0x00
 #define CMD_PORT_MODE     0x01
 #define CMD_FEATURE       0x02
@@ -84,14 +83,12 @@ enum {
 	SERIAL_FAST = 1
 };
 
-
 static int buspirate_fd = -1;
 static int buspirate_pinmode = MODE_JTAG_OD;
 static int buspirate_baudrate = SERIAL_NORMAL;
 static int buspirate_vreg;
 static int buspirate_pullup;
 static char *buspirate_port;
-
 
 /* TAP interface */
 static void buspirate_tap_init(void);
@@ -217,13 +214,13 @@ static int buspirate_execute_queue(void)
 static int buspirate_init(void)
 {
 	if (buspirate_port == NULL) {
-		LOG_ERROR("You need to specify port !");
+		LOG_ERROR("You need to specify the serial port!");
 		return ERROR_JTAG_INIT_FAILED;
 	}
 
 	buspirate_fd = buspirate_serial_open(buspirate_port);
 	if (buspirate_fd == -1) {
-		LOG_ERROR("Could not open serial port.");
+		LOG_ERROR("Could not open serial port");
 		return ERROR_JTAG_INIT_FAILED;
 	}
 
@@ -249,7 +246,7 @@ static int buspirate_init(void)
 
 static int buspirate_quit(void)
 {
-	LOG_INFO("Shuting down buspirate ");
+	LOG_INFO("Shutting down buspirate.");
 	buspirate_jtag_set_mode(buspirate_fd, MODE_HIZ);
 
 	buspirate_jtag_set_speed(buspirate_fd, SERIAL_NORMAL);
@@ -279,10 +276,8 @@ COMMAND_HANDLER(buspirate_handle_adc_command)
 
 COMMAND_HANDLER(buspirate_handle_vreg_command)
 {
-	if (CMD_ARGC < 1) {
-		LOG_ERROR("usage: buspirate_vreg <1|0>");
-		return ERROR_OK;
-	}
+	if (CMD_ARGC < 1)
+		return ERROR_COMMAND_SYNTAX_ERROR;
 
 	if (atoi(CMD_ARGV[0]) == 1)
 		buspirate_vreg = 1;
@@ -297,10 +292,8 @@ COMMAND_HANDLER(buspirate_handle_vreg_command)
 
 COMMAND_HANDLER(buspirate_handle_pullup_command)
 {
-	if (CMD_ARGC < 1) {
-		LOG_ERROR("usage: buspirate_pullup <1|0>");
-		return ERROR_OK;
-	}
+	if (CMD_ARGC < 1)
+		return ERROR_COMMAND_SYNTAX_ERROR;
 
 	if (atoi(CMD_ARGV[0]) == 1)
 		buspirate_pullup = 1;
@@ -315,10 +308,8 @@ COMMAND_HANDLER(buspirate_handle_pullup_command)
 
 COMMAND_HANDLER(buspirate_handle_led_command)
 {
-	if (CMD_ARGC < 1) {
-		LOG_ERROR("usage: buspirate_led <1|0>");
-		return ERROR_OK;
-	}
+	if (CMD_ARGC < 1)
+		return ERROR_COMMAND_SYNTAX_ERROR;
 
 	if (atoi(CMD_ARGV[0]) == 1) {
 		/* enable led */
@@ -338,10 +329,8 @@ COMMAND_HANDLER(buspirate_handle_led_command)
 
 COMMAND_HANDLER(buspirate_handle_mode_command)
 {
-	if (CMD_ARGC < 1) {
-		LOG_ERROR("usage: buspirate_mode <normal|open-drain>");
-		return ERROR_OK;
-	}
+	if (CMD_ARGC < 1)
+		return ERROR_COMMAND_SYNTAX_ERROR;
 
 	if (CMD_ARGV[0][0] == 'n')
 		buspirate_pinmode = MODE_JTAG;
@@ -356,10 +345,8 @@ COMMAND_HANDLER(buspirate_handle_mode_command)
 
 COMMAND_HANDLER(buspirate_handle_speed_command)
 {
-	if (CMD_ARGC < 1) {
-		LOG_ERROR("usage: buspirate_speed <normal|fast>");
-		return ERROR_OK;
-	}
+	if (CMD_ARGC < 1)
+		return ERROR_COMMAND_SYNTAX_ERROR;
 
 	if (CMD_ARGV[0][0] == 'n')
 		buspirate_baudrate = SERIAL_NORMAL;
@@ -374,10 +361,8 @@ COMMAND_HANDLER(buspirate_handle_speed_command)
 
 COMMAND_HANDLER(buspirate_handle_port_command)
 {
-	if (CMD_ARGC < 1) {
-		LOG_ERROR("usage: buspirate_port /dev/ttyUSB0");
-		return ERROR_OK;
-	}
+	if (CMD_ARGC < 1)
+		return ERROR_COMMAND_SYNTAX_ERROR;
 
 	if (buspirate_port == NULL)
 		buspirate_port = strdup(CMD_ARGV[0]);
@@ -395,36 +380,42 @@ static const struct command_registration buspirate_command_handlers[] = {
 	},
 	{
 		.name = "buspirate_vreg",
+		.usage = "<1|0>",
 		.handler = &buspirate_handle_vreg_command,
 		.mode = COMMAND_CONFIG,
 		.help = "changes the state of voltage regulators",
 	},
 	{
 		.name = "buspirate_pullup",
+		.usage = "<1|0>",
 		.handler = &buspirate_handle_pullup_command,
 		.mode = COMMAND_CONFIG,
 		.help = "changes the state of pullup",
 	},
 	{
 		.name = "buspirate_led",
+		.usage = "<1|0>",
 		.handler = &buspirate_handle_led_command,
 		.mode = COMMAND_EXEC,
 		.help = "changes the state of led",
 	},
 	{
 		.name = "buspirate_speed",
+		.usage = "<normal|fast>",
 		.handler = &buspirate_handle_speed_command,
 		.mode = COMMAND_CONFIG,
 		.help = "speed of the interface",
 	},
 	{
 		.name = "buspirate_mode",
+		.usage = "<normal|open-drain>",
 		.handler = &buspirate_handle_mode_command,
 		.mode = COMMAND_CONFIG,
 		.help = "pin mode of the interface",
 	},
 	{
 		.name = "buspirate_port",
+		.usage = "/dev/ttyUSB0",
 		.handler = &buspirate_handle_port_command,
 		.mode =	COMMAND_CONFIG,
 		.help = "name of the serial port to open",
@@ -608,6 +599,10 @@ static int buspirate_tap_execute(void)
 	}
 
 	ret = buspirate_serial_read(buspirate_fd, tmp, bytes_to_send + 3);
+	if (ret != bytes_to_send + 3) {
+		LOG_ERROR("error reading");
+		return ERROR_FAIL;
+	}
 	in_buf = (uint8_t *)(&tmp[3]);
 
 	/* parse the scans */
@@ -665,7 +660,7 @@ static void buspirate_tap_append(int tms, int tdi)
 
 		tap_chain_index++;
 	} else
-		LOG_ERROR("tap_chain overflow, Bad things will happen");
+		LOG_ERROR("tap_chain overflow, bad things will happen");
 
 }
 
@@ -724,30 +719,34 @@ static void buspirate_jtag_enable(int fd)
 	while (!done) {
 		ret = buspirate_serial_read(fd, tmp, 4);
 		if (ret != 4) {
-			LOG_ERROR("Buspirate error. Is is binary/"
+			LOG_ERROR("Buspirate error. Is binary"
 				"/OpenOCD support enabled?");
 			exit(-1);
 		}
 		if (strncmp(tmp, "BBIO", 4) == 0) {
 			ret = buspirate_serial_read(fd, tmp, 1);
 			if (ret != 1) {
-				LOG_ERROR("Buspirate did not correctly! "
+				LOG_ERROR("Buspirate did not answer correctly! "
 					"Do you have correct firmware?");
 				exit(-1);
 			}
 			if (tmp[0] != '1') {
-				LOG_ERROR("Unsupported binary protocol ");
+				LOG_ERROR("Unsupported binary protocol");
 				exit(-1);
 			}
 			if (cmd_sent == 0) {
 				cmd_sent = 1;
 				tmp[0] = CMD_ENTER_OOCD;
 				ret = buspirate_serial_write(fd, tmp, 1);
+				if (ret != 1) {
+					LOG_ERROR("error reading");
+					exit(-1);
+				}
 			}
 		} else if (strncmp(tmp, "OCD1", 4) == 0)
 			done = 1;
 		else {
-			LOG_ERROR("Buspirate did not correctly! "
+			LOG_ERROR("Buspirate did not answer correctly! "
 				"Do you have correct firmware?");
 			exit(-1);
 		}
@@ -757,13 +756,13 @@ static void buspirate_jtag_enable(int fd)
 
 static void buspirate_jtag_reset(int fd)
 {
-	int ret;
 	char tmp[5];
 
 	tmp[0] = 0x00; /* exit OCD1 mode */
 	buspirate_serial_write(fd, tmp, 1);
 	usleep(10000);
-	ret = buspirate_serial_read(fd, tmp, 5);
+	/* We ignore the return value here purposly, nothing we can do */
+	buspirate_serial_read(fd, tmp, 5);
 	if (strncmp(tmp, "BBIO1", 5) == 0) {
 		tmp[0] = 0x0F; /*  reset BP */
 		buspirate_serial_write(fd, tmp, 1);
@@ -794,7 +793,7 @@ static void buspirate_jtag_set_speed(int fd, char speed)
 		exit(-1);
 	}
 	if ((tmp[0] != CMD_UART_SPEED) || (tmp[1] != speed)) {
-		LOG_ERROR("Buspirate didn't reply as expected");
+		LOG_ERROR("Buspirate did not reply as expected");
 		exit(-1);
 	}
 	LOG_INFO("Buspirate switched to %s mode",
@@ -979,8 +978,6 @@ static void buspirate_print_buffer(char *buf, int size)
 		}
 	}
 
-	if (line[0] != 0) {
+	if (line[0] != 0)
 		LOG_DEBUG("%s", line);
-	}
 }
-

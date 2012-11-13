@@ -16,6 +16,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -24,18 +25,20 @@
 extern struct flash_driver lpc2000_flash;
 extern struct flash_driver lpc288x_flash;
 extern struct flash_driver lpc2900_flash;
+extern struct flash_driver lpcspifi_flash;
 extern struct flash_driver cfi_flash;
 extern struct flash_driver at91sam3_flash;
+extern struct flash_driver at91sam4_flash;
 extern struct flash_driver at91sam7_flash;
 extern struct flash_driver str7x_flash;
 extern struct flash_driver str9x_flash;
 extern struct flash_driver aduc702x_flash;
 extern struct flash_driver stellaris_flash;
 extern struct flash_driver str9xpec_flash;
-extern struct flash_driver stm32x_flash;
-extern struct flash_driver stm32xf2xxx_flash;
+extern struct flash_driver stm32f1x_flash;
+extern struct flash_driver stm32f2x_flash;
+extern struct flash_driver stm32lx_flash;
 extern struct flash_driver tms470_flash;
-extern struct flash_driver ecosflash_flash;
 extern struct flash_driver ocl_flash;
 extern struct flash_driver pic32mx_flash;
 extern struct flash_driver avr_flash;
@@ -43,7 +46,9 @@ extern struct flash_driver faux_flash;
 extern struct flash_driver virtual_flash;
 extern struct flash_driver stmsmi_flash;
 extern struct flash_driver em357_flash;
-//extern struct flash_driver dsp5680xx_flash;
+extern struct flash_driver dsp5680xx_flash;
+extern struct flash_driver fm3_flash;
+extern struct flash_driver kinetis_flash;
 
 /**
  * The list of built-in flash drivers.
@@ -53,18 +58,20 @@ static struct flash_driver *flash_drivers[] = {
 	&lpc2000_flash,
 	&lpc288x_flash,
 	&lpc2900_flash,
+	&lpcspifi_flash,
 	&cfi_flash,
 	&at91sam7_flash,
 	&at91sam3_flash,
+	&at91sam4_flash,
 	&str7x_flash,
 	&str9x_flash,
 	&aduc702x_flash,
 	&stellaris_flash,
 	&str9xpec_flash,
-	&stm32x_flash,
-	&stm32xf2xxx_flash,
+	&stm32f1x_flash,
+	&stm32f2x_flash,
+	&stm32lx_flash,
 	&tms470_flash,
-	&ecosflash_flash,
 	&ocl_flash,
 	&pic32mx_flash,
 	&avr_flash,
@@ -72,15 +79,15 @@ static struct flash_driver *flash_drivers[] = {
 	&virtual_flash,
 	&stmsmi_flash,
 	&em357_flash,
-	// Disabled for now, it generates warnings
-	//&dsp5680xx_flash,
+	&fm3_flash,
+	&dsp5680xx_flash,
+	&kinetis_flash,
 	NULL,
 };
 
 struct flash_driver *flash_driver_find_by_name(const char *name)
 {
-	for (unsigned i = 0; flash_drivers[i]; i++)
-	{
+	for (unsigned i = 0; flash_drivers[i]; i++) {
 		if (strcmp(name, flash_drivers[i]->name) == 0)
 			return flash_drivers[i];
 	}

@@ -69,10 +69,10 @@
 #include "config.h"
 #endif
 
+#include "jtag/interface.h"
 #include "arm.h"
 #include "arm_adi_v5.h"
 #include <helper/time_support.h>
-
 
 /* ARM ADI Specification requires at least 10 bits used for TAR autoincrement  */
 
@@ -100,12 +100,11 @@ static uint32_t max_tar_block_size(uint32_t tar_autoincr_block, uint32_t address
  * @param apsel Number of the AP to (implicitly) use with further
  *	transactions.  This normally identifies a MEM-AP.
  */
-void dap_ap_select(struct adiv5_dap *dap,uint8_t ap)
+void dap_ap_select(struct adiv5_dap *dap, uint8_t ap)
 {
 	uint32_t new_ap = (ap << 24) & 0xFF000000;
 
-	if (new_ap != dap->ap_current)
-	{
+	if (new_ap != dap->ap_current) {
 		dap->ap_current = new_ap;
 		/* Switching AP invalidates cached values.
 		 * Values MUST BE UPDATED BEFORE AP ACCESS.
@@ -140,16 +139,14 @@ int dap_setup_accessport(struct adiv5_dap *dap, uint32_t csw, uint32_t tar)
 	int retval;
 
 	csw = csw | CSW_DBGSWENABLE | CSW_MASTER_DEBUG | CSW_HPROT;
-	if (csw != dap->ap_csw_value)
-	{
+	if (csw != dap->ap_csw_value) {
 		/* LOG_DEBUG("DAP: Set CSW %x",csw); */
 		retval = dap_queue_ap_write(dap, AP_REG_CSW, csw);
 		if (retval != ERROR_OK)
 			return retval;
 		dap->ap_csw_value = csw;
 	}
-	if (tar != dap->ap_tar_value)
-	{
+	if (tar != dap->ap_tar_value) {
 		/* LOG_DEBUG("DAP: Set TAR %x",tar); */
 		retval = dap_queue_ap_write(dap, AP_REG_TAR, tar);
 		if (retval != ERROR_OK)
@@ -274,23 +271,20 @@ int mem_ap_write_buf_u32(struct adiv5_dap *dap, const uint8_t *buffer, int count
 {
 	int wcount, blocksize, writecount, errorcount = 0, retval = ERROR_OK;
 	uint32_t adr = address;
-	const uint8_t* pBuffer = buffer;
+	const uint8_t *pBuffer = buffer;
 
 	count >>= 2;
 	wcount = count;
 
 	/* if we have an unaligned access - reorder data */
-	if (adr & 0x3u)
-	{
-		for (writecount = 0; writecount < count; writecount++)
-		{
+	if (adr & 0x3u) {
+		for (writecount = 0; writecount < count; writecount++) {
 			int i;
 			uint32_t outvalue;
 			memcpy(&outvalue, pBuffer, sizeof(uint32_t));
 
-			for (i = 0; i < 4; i++)
-			{
-				*((uint8_t*)pBuffer + (adr & 0x3)) = outvalue;
+			for (i = 0; i < 4; i++) {
+				*((uint8_t *)pBuffer + (adr & 0x3)) = outvalue;
 				outvalue >>= 8;
 				adr++;
 			}
@@ -298,8 +292,7 @@ int mem_ap_write_buf_u32(struct adiv5_dap *dap, const uint8_t *buffer, int count
 		}
 	}
 
-	while (wcount > 0)
-	{
+	while (wcount > 0) {
 		/* Adjust to write blocks within boundaries aligned to the TAR autoincremnent size*/
 		blocksize = max_tar_block_size(dap->tar_autoincr_block, address);
 		if (wcount < blocksize)
@@ -313,27 +306,22 @@ int mem_ap_write_buf_u32(struct adiv5_dap *dap, const uint8_t *buffer, int count
 		if (retval != ERROR_OK)
 			return retval;
 
-		for (writecount = 0; writecount < blocksize; writecount++)
-		{
+		for (writecount = 0; writecount < blocksize; writecount++) {
 			retval = dap_queue_ap_write(dap, AP_REG_DRW,
 				*(uint32_t *) ((void *) (buffer + 4 * writecount)));
 			if (retval != ERROR_OK)
 				break;
 		}
 
-		if ((retval = dap_run(dap)) == ERROR_OK)
-		{
+		retval = dap_run(dap);
+		if (retval == ERROR_OK) {
 			wcount = wcount - blocksize;
 			address = address + 4 * blocksize;
 			buffer = buffer + 4 * blocksize;
-		}
-		else
-		{
+		} else
 			errorcount++;
-		}
 
-		if (errorcount > 1)
-		{
+		if (errorcount > 1) {
 			LOG_WARNING("Block write error address 0x%" PRIx32 ", wcount 0x%x", address, wcount);
 			return retval;
 		}
@@ -350,8 +338,7 @@ static int mem_ap_write_buf_packed_u16(struct adiv5_dap *dap,
 
 	wcount = count >> 1;
 
-	while (wcount > 0)
-	{
+	while (wcount > 0) {
 		int nbytes;
 
 		/* Adjust to write blocks within boundaries aligned to the TAR autoincremnent size*/
@@ -369,16 +356,13 @@ static int mem_ap_write_buf_packed_u16(struct adiv5_dap *dap,
 			return retval;
 		writecount = blocksize;
 
-		do
-		{
+		do {
 			nbytes = MIN((writecount << 1), 4);
 
-			if (nbytes < 4)
-			{
+			if (nbytes < 4) {
 				retval = mem_ap_write_buf_u16(dap, buffer,
 						nbytes, address);
-				if (retval != ERROR_OK)
-				{
+				if (retval != ERROR_OK) {
 					LOG_WARNING("Block write error address "
 						"0x%" PRIx32 ", count 0x%x",
 						address, count);
@@ -386,15 +370,12 @@ static int mem_ap_write_buf_packed_u16(struct adiv5_dap *dap,
 				}
 
 				address += nbytes >> 1;
-			}
-			else
-			{
+			} else {
 				uint32_t outvalue;
 				memcpy(&outvalue, buffer, sizeof(uint32_t));
 
-				for (i = 0; i < nbytes; i++)
-				{
-					*((uint8_t*)buffer + (address & 0x3)) = outvalue;
+				for (i = 0; i < nbytes; i++) {
+					*((uint8_t *)buffer + (address & 0x3)) = outvalue;
 					outvalue >>= 8;
 					address++;
 				}
@@ -405,8 +386,8 @@ static int mem_ap_write_buf_packed_u16(struct adiv5_dap *dap,
 				if (retval != ERROR_OK)
 					break;
 
-				if ((retval = dap_run(dap)) != ERROR_OK)
-				{
+				retval = dap_run(dap);
+				if (retval != ERROR_OK) {
 					LOG_WARNING("Block write error address "
 						"0x%" PRIx32 ", count 0x%x",
 						address, count);
@@ -431,8 +412,7 @@ int mem_ap_write_buf_u16(struct adiv5_dap *dap, const uint8_t *buffer, int count
 	if (count >= 4)
 		return mem_ap_write_buf_packed_u16(dap, buffer, count, address);
 
-	while (count > 0)
-	{
+	while (count > 0) {
 		retval = dap_setup_accessport(dap, CSW_16BIT | CSW_ADDRINC_SINGLE, address);
 		if (retval != ERROR_OK)
 			return retval;
@@ -463,8 +443,7 @@ static int mem_ap_write_buf_packed_u8(struct adiv5_dap *dap,
 
 	wcount = count;
 
-	while (wcount > 0)
-	{
+	while (wcount > 0) {
 		int nbytes;
 
 		/* Adjust to write blocks within boundaries aligned to the TAR autoincremnent size*/
@@ -478,15 +457,12 @@ static int mem_ap_write_buf_packed_u8(struct adiv5_dap *dap,
 			return retval;
 		writecount = blocksize;
 
-		do
-		{
+		do {
 			nbytes = MIN(writecount, 4);
 
-			if (nbytes < 4)
-			{
+			if (nbytes < 4) {
 				retval = mem_ap_write_buf_u8(dap, buffer, nbytes, address);
-				if (retval != ERROR_OK)
-				{
+				if (retval != ERROR_OK) {
 					LOG_WARNING("Block write error address "
 						"0x%" PRIx32 ", count 0x%x",
 						address, count);
@@ -494,15 +470,12 @@ static int mem_ap_write_buf_packed_u8(struct adiv5_dap *dap,
 				}
 
 				address += nbytes;
-			}
-			else
-			{
+			} else {
 				uint32_t outvalue;
 				memcpy(&outvalue, buffer, sizeof(uint32_t));
 
-				for (i = 0; i < nbytes; i++)
-				{
-					*((uint8_t*)buffer + (address & 0x3)) = outvalue;
+				for (i = 0; i < nbytes; i++) {
+					*((uint8_t *)buffer + (address & 0x3)) = outvalue;
 					outvalue >>= 8;
 					address++;
 				}
@@ -513,8 +486,8 @@ static int mem_ap_write_buf_packed_u8(struct adiv5_dap *dap,
 				if (retval != ERROR_OK)
 					break;
 
-				if ((retval = dap_run(dap)) != ERROR_OK)
-				{
+				retval = dap_run(dap);
+				if (retval != ERROR_OK) {
 					LOG_WARNING("Block write error address "
 						"0x%" PRIx32 ", count 0x%x",
 						address, count);
@@ -539,8 +512,7 @@ int mem_ap_write_buf_u8(struct adiv5_dap *dap, const uint8_t *buffer, int count,
 	if (count >= 4)
 		return mem_ap_write_buf_packed_u8(dap, buffer, count, address);
 
-	while (count > 0)
-	{
+	while (count > 0) {
 		retval = dap_setup_accessport(dap, CSW_8BIT | CSW_ADDRINC_SINGLE, address);
 		if (retval != ERROR_OK)
 			return retval;
@@ -581,13 +553,12 @@ int mem_ap_read_buf_u32(struct adiv5_dap *dap, uint8_t *buffer,
 {
 	int wcount, blocksize, readcount, errorcount = 0, retval = ERROR_OK;
 	uint32_t adr = address;
-	uint8_t* pBuffer = buffer;
+	uint8_t *pBuffer = buffer;
 
 	count >>= 2;
 	wcount = count;
 
-	while (wcount > 0)
-	{
+	while (wcount > 0) {
 		/* Adjust to read blocks within boundaries aligned to the
 		 * TAR autoincrement size (at least 2^10).  Autoincrement
 		 * mode avoids an extra per-word roundtrip to update TAR.
@@ -618,8 +589,7 @@ int mem_ap_read_buf_u32(struct adiv5_dap *dap, uint8_t *buffer,
 				DPAP_READ, 0, NULL, NULL);
 		if (retval != ERROR_OK)
 			return retval;
-		for (readcount = 0; readcount < blocksize - 1; readcount++)
-		{
+		for (readcount = 0; readcount < blocksize - 1; readcount++) {
 			/* Scan out next read; scan in posted value for the
 			 * previous one.  Assumes read is acked "OK/FAULT",
 			 * and CTRL_STAT says that meant "OK".
@@ -641,11 +611,9 @@ int mem_ap_read_buf_u32(struct adiv5_dap *dap, uint8_t *buffer,
 			return retval;
 
 		retval = dap_run(dap);
-		if (retval != ERROR_OK)
-		{
+		if (retval != ERROR_OK) {
 			errorcount++;
-			if (errorcount <= 1)
-			{
+			if (errorcount <= 1) {
 				/* try again */
 				continue;
 			}
@@ -658,17 +626,14 @@ int mem_ap_read_buf_u32(struct adiv5_dap *dap, uint8_t *buffer,
 	}
 
 	/* if we have an unaligned access - reorder data */
-	if (adr & 0x3u)
-	{
-		for (readcount = 0; readcount < count; readcount++)
-		{
+	if (adr & 0x3u) {
+		for (readcount = 0; readcount < count; readcount++) {
 			int i;
 			uint32_t data;
 			memcpy(&data, pBuffer, sizeof(uint32_t));
 
-			for (i = 0; i < 4; i++)
-			{
-				*((uint8_t*)pBuffer) =
+			for (i = 0; i < 4; i++) {
+				*((uint8_t *)pBuffer) =
 						(data >> 8 * (adr & 0x3));
 				pBuffer++;
 				adr++;
@@ -688,8 +653,7 @@ static int mem_ap_read_buf_packed_u16(struct adiv5_dap *dap,
 
 	wcount = count >> 1;
 
-	while (wcount > 0)
-	{
+	while (wcount > 0) {
 		int nbytes;
 
 		/* Adjust to read blocks within boundaries aligned to the TAR autoincremnent size*/
@@ -706,22 +670,20 @@ static int mem_ap_read_buf_packed_u16(struct adiv5_dap *dap,
 			blocksize = 1;
 		readcount = blocksize;
 
-		do
-		{
+		do {
 			retval = dap_queue_ap_read(dap, AP_REG_DRW, &invalue);
 			if (retval != ERROR_OK)
 				return retval;
-			if ((retval = dap_run(dap)) != ERROR_OK)
-			{
+			retval = dap_run(dap);
+			if (retval != ERROR_OK) {
 				LOG_WARNING("Block read error address 0x%" PRIx32 ", count 0x%x", address, count);
 				return retval;
 			}
 
 			nbytes = MIN((readcount << 1), 4);
 
-			for (i = 0; i < nbytes; i++)
-			{
-				*((uint8_t*)buffer) = (invalue >> 8 * (address & 0x3));
+			for (i = 0; i < nbytes; i++) {
+				*((uint8_t *)buffer) = (invalue >> 8 * (address & 0x3));
 				buffer++;
 				address++;
 			}
@@ -751,8 +713,7 @@ int mem_ap_read_buf_u16(struct adiv5_dap *dap, uint8_t *buffer,
 	if (count >= 4)
 		return mem_ap_read_buf_packed_u16(dap, buffer, count, address);
 
-	while (count > 0)
-	{
+	while (count > 0) {
 		retval = dap_setup_accessport(dap, CSW_16BIT | CSW_ADDRINC_SINGLE, address);
 		if (retval != ERROR_OK)
 			return retval;
@@ -764,17 +725,13 @@ int mem_ap_read_buf_u16(struct adiv5_dap *dap, uint8_t *buffer,
 		if (retval != ERROR_OK)
 			break;
 
-		if (address & 0x1)
-		{
-			for (i = 0; i < 2; i++)
-			{
-				*((uint8_t*)buffer) = (invalue >> 8 * (address & 0x3));
+		if (address & 0x1) {
+			for (i = 0; i < 2; i++) {
+				*((uint8_t *)buffer) = (invalue >> 8 * (address & 0x3));
 				buffer++;
 				address++;
 			}
-		}
-		else
-		{
+		} else {
 			uint16_t svalue = (invalue >> 8 * (address & 0x3));
 			memcpy(buffer, &svalue, sizeof(uint16_t));
 			address += 2;
@@ -801,8 +758,7 @@ static int mem_ap_read_buf_packed_u8(struct adiv5_dap *dap,
 
 	wcount = count;
 
-	while (wcount > 0)
-	{
+	while (wcount > 0) {
 		int nbytes;
 
 		/* Adjust to read blocks within boundaries aligned to the TAR autoincremnent size*/
@@ -816,22 +772,20 @@ static int mem_ap_read_buf_packed_u8(struct adiv5_dap *dap,
 			return retval;
 		readcount = blocksize;
 
-		do
-		{
+		do {
 			retval = dap_queue_ap_read(dap, AP_REG_DRW, &invalue);
 			if (retval != ERROR_OK)
 				return retval;
-			if ((retval = dap_run(dap)) != ERROR_OK)
-			{
+			retval = dap_run(dap);
+			if (retval != ERROR_OK) {
 				LOG_WARNING("Block read error address 0x%" PRIx32 ", count 0x%x", address, count);
 				return retval;
 			}
 
 			nbytes = MIN(readcount, 4);
 
-			for (i = 0; i < nbytes; i++)
-			{
-				*((uint8_t*)buffer) = (invalue >> 8 * (address & 0x3));
+			for (i = 0; i < nbytes; i++) {
+				*((uint8_t *)buffer) = (invalue >> 8 * (address & 0x3));
 				buffer++;
 				address++;
 			}
@@ -861,8 +815,7 @@ int mem_ap_read_buf_u8(struct adiv5_dap *dap, uint8_t *buffer,
 	if (count >= 4)
 		return mem_ap_read_buf_packed_u8(dap, buffer, count, address);
 
-	while (count > 0)
-	{
+	while (count > 0) {
 		retval = dap_setup_accessport(dap, CSW_8BIT | CSW_ADDRINC_SINGLE, address);
 		if (retval != ERROR_OK)
 			return retval;
@@ -873,7 +826,7 @@ int mem_ap_read_buf_u8(struct adiv5_dap *dap, uint8_t *buffer,
 		if (retval != ERROR_OK)
 			break;
 
-		*((uint8_t*)buffer) = (invalue >> 8 * (address & 0x3));
+		*((uint8_t *)buffer) = (invalue >> 8 * (address & 0x3));
 		count--;
 		address++;
 		buffer++;
@@ -955,6 +908,163 @@ int mem_ap_sel_write_buf_u32(struct adiv5_dap *swjdp, uint8_t ap,
 	return mem_ap_write_buf_u32(swjdp, buffer, count, address);
 }
 
+#define MDM_REG_STAT		0x00
+#define MDM_REG_CTRL		0x04
+#define MDM_REG_ID		0xfc
+
+#define MDM_STAT_FMEACK		(1<<0)
+#define MDM_STAT_FREADY		(1<<1)
+#define MDM_STAT_SYSSEC		(1<<2)
+#define MDM_STAT_SYSRES		(1<<3)
+#define MDM_STAT_FMEEN		(1<<5)
+#define MDM_STAT_BACKDOOREN	(1<<6)
+#define MDM_STAT_LPEN		(1<<7)
+#define MDM_STAT_VLPEN		(1<<8)
+#define MDM_STAT_LLSMODEXIT	(1<<9)
+#define MDM_STAT_VLLSXMODEXIT	(1<<10)
+#define MDM_STAT_CORE_HALTED	(1<<16)
+#define MDM_STAT_CORE_SLEEPDEEP	(1<<17)
+#define MDM_STAT_CORESLEEPING	(1<<18)
+
+#define MEM_CTRL_FMEIP		(1<<0)
+#define MEM_CTRL_DBG_DIS	(1<<1)
+#define MEM_CTRL_DBG_REQ	(1<<2)
+#define MEM_CTRL_SYS_RES_REQ	(1<<3)
+#define MEM_CTRL_CORE_HOLD_RES	(1<<4)
+#define MEM_CTRL_VLLSX_DBG_REQ	(1<<5)
+#define MEM_CTRL_VLLSX_DBG_ACK	(1<<6)
+#define MEM_CTRL_VLLSX_STAT_ACK	(1<<7)
+
+/**
+ *
+ */
+int dap_syssec_kinetis_mdmap(struct adiv5_dap *dap)
+{
+	uint32_t val;
+	int retval;
+	enum reset_types jtag_reset_config = jtag_get_reset_config();
+
+	dap_ap_select(dap, 1);
+
+	/* first check mdm-ap id register */
+	retval = dap_queue_ap_read(dap, MDM_REG_ID, &val);
+	if (retval != ERROR_OK)
+		return retval;
+	dap_run(dap);
+
+	if (val != 0x001C0000) {
+		LOG_DEBUG("id doesn't match %08X != 0x001C0000", val);
+		dap_ap_select(dap, 0);
+		return ERROR_FAIL;
+	}
+
+	/* read and parse status register
+	 * it's important that the device is out of
+	 * reset here
+	 */
+	retval = dap_queue_ap_read(dap, MDM_REG_STAT, &val);
+	if (retval != ERROR_OK)
+		return retval;
+	dap_run(dap);
+
+	LOG_DEBUG("MDM_REG_STAT %08X", val);
+
+	if ((val & (MDM_STAT_SYSSEC|MDM_STAT_FREADY)) != (MDM_STAT_FREADY)) {
+		LOG_DEBUG("MDMAP: system is secured, masserase needed");
+
+		if (!(val & MDM_STAT_FMEEN))
+			LOG_DEBUG("MDMAP: masserase is disabled");
+		else {
+			/* we need to assert reset */
+			if (jtag_reset_config & RESET_HAS_SRST) {
+				/* default to asserting srst */
+				adapter_assert_reset();
+			} else {
+				LOG_DEBUG("SRST not configured");
+				dap_ap_select(dap, 0);
+				return ERROR_FAIL;
+			}
+
+			while (1) {
+				retval = dap_queue_ap_write(dap, MDM_REG_CTRL, MEM_CTRL_FMEIP);
+				if (retval != ERROR_OK)
+					return retval;
+				dap_run(dap);
+				/* read status register and wait for ready */
+				retval = dap_queue_ap_read(dap, MDM_REG_STAT, &val);
+				if (retval != ERROR_OK)
+					return retval;
+				dap_run(dap);
+				LOG_DEBUG("MDM_REG_STAT %08X", val);
+
+				if ((val & 1))
+					break;
+			}
+
+			while (1) {
+				retval = dap_queue_ap_write(dap, MDM_REG_CTRL, 0);
+				if (retval != ERROR_OK)
+					return retval;
+				dap_run(dap);
+				/* read status register */
+				retval = dap_queue_ap_read(dap, MDM_REG_STAT, &val);
+				if (retval != ERROR_OK)
+					return retval;
+				dap_run(dap);
+				LOG_DEBUG("MDM_REG_STAT %08X", val);
+				/* read control register and wait for ready */
+				retval = dap_queue_ap_read(dap, MDM_REG_CTRL, &val);
+				if (retval != ERROR_OK)
+					return retval;
+				dap_run(dap);
+				LOG_DEBUG("MDM_REG_CTRL %08X", val);
+
+				if (val == 0x00)
+					break;
+			}
+		}
+	}
+
+	dap_ap_select(dap, 0);
+
+	return ERROR_OK;
+}
+
+/** */
+struct dap_syssec_filter {
+	/** */
+	uint32_t idcode;
+	/** */
+	int (*dap_init)(struct adiv5_dap *dap);
+};
+
+/** */
+static struct dap_syssec_filter dap_syssec_filter_data[] = {
+	{ 0x4BA00477, dap_syssec_kinetis_mdmap }
+};
+
+/**
+ *
+ */
+int dap_syssec(struct adiv5_dap *dap)
+{
+	unsigned int i;
+	struct jtag_tap *tap;
+
+	for (i = 0; i < sizeof(dap_syssec_filter_data); i++) {
+		tap = dap->jtag_info->tap;
+
+		while (tap != NULL) {
+			if (tap->hasidcode && (dap_syssec_filter_data[i].idcode == tap->idcode)) {
+				LOG_DEBUG("DAP: mdmap_init for idcode: %08x", tap->idcode);
+				dap_syssec_filter_data[i].dap_init(dap);
+			}
+			tap = tap->next_tap;
+		}
+	}
+
+	return ERROR_OK;
+}
 
 /*--------------------------------------------------------------------------*/
 
@@ -1024,28 +1134,29 @@ int ahbap_debugport_init(struct adiv5_dap *dap)
 	retval = dap_queue_dp_read(dap, DP_CTRL_STAT, &ctrlstat);
 	if (retval != ERROR_OK)
 		return retval;
-	if ((retval = dap_run(dap)) != ERROR_OK)
+	retval = dap_run(dap);
+	if (retval != ERROR_OK)
 		return retval;
 
 	/* Check that we have debug power domains activated */
-	while (!(ctrlstat & CDBGPWRUPACK) && (cnt++ < 10))
-	{
+	while (!(ctrlstat & CDBGPWRUPACK) && (cnt++ < 10)) {
 		LOG_DEBUG("DAP: wait CDBGPWRUPACK");
 		retval = dap_queue_dp_read(dap, DP_CTRL_STAT, &ctrlstat);
 		if (retval != ERROR_OK)
 			return retval;
-		if ((retval = dap_run(dap)) != ERROR_OK)
+		retval = dap_run(dap);
+		if (retval != ERROR_OK)
 			return retval;
 		alive_sleep(10);
 	}
 
-	while (!(ctrlstat & CSYSPWRUPACK) && (cnt++ < 10))
-	{
+	while (!(ctrlstat & CSYSPWRUPACK) && (cnt++ < 10)) {
 		LOG_DEBUG("DAP: wait CSYSPWRUPACK");
 		retval = dap_queue_dp_read(dap, DP_CTRL_STAT, &ctrlstat);
 		if (retval != ERROR_OK)
 			return retval;
-		if ((retval = dap_run(dap)) != ERROR_OK)
+		retval = dap_run(dap);
+		if (retval != ERROR_OK)
 			return retval;
 		alive_sleep(10);
 	}
@@ -1062,22 +1173,23 @@ int ahbap_debugport_init(struct adiv5_dap *dap)
 	if (retval != ERROR_OK)
 		return retval;
 
+	dap_syssec(dap);
+
 	return ERROR_OK;
 }
 
 /* CID interpretation -- see ARM IHI 0029B section 3
  * and ARM IHI 0031A table 13-3.
  */
-static const char *class_description[16] ={
+static const char *class_description[16] = {
 	"Reserved", "ROM table", "Reserved", "Reserved",
 	"Reserved", "Reserved", "Reserved", "Reserved",
 	"Reserved", "CoreSight component", "Reserved", "Peripheral Test Block",
 	"Reserved", "OptimoDE DESS",
-		"Generic IP component", "PrimeCell or System component"
+	"Generic IP component", "PrimeCell or System component"
 };
 
-static bool
-is_dap_cid_ok(uint32_t cid3, uint32_t cid2, uint32_t cid1, uint32_t cid0)
+static bool is_dap_cid_ok(uint32_t cid3, uint32_t cid2, uint32_t cid1, uint32_t cid0)
 {
 	return cid3 == 0xb1 && cid2 == 0x05
 			&& ((cid1 & 0x0f) == 0) && cid0 == 0x0d;
@@ -1092,7 +1204,7 @@ int dap_get_debugbase(struct adiv5_dap *dap, int ap,
 
 	/* AP address is in bits 31:24 of DP_SELECT */
 	if (ap >= 256)
-		return ERROR_INVALID_ARGUMENTS;
+		return ERROR_COMMAND_SYNTAX_ERROR;
 
 	ap_old = dap->ap_current;
 	dap_ap_select(dap, ap);
@@ -1135,13 +1247,12 @@ int dap_lookup_cs_component(struct adiv5_dap *dap, int ap,
 	int retval = ERROR_FAIL;
 
 	if (ap >= 256)
-		return ERROR_INVALID_ARGUMENTS;
+		return ERROR_COMMAND_SYNTAX_ERROR;
 
 	ap_old = dap->ap_current;
 	dap_ap_select(dap, ap);
 
-	do
-	{
+	do {
 		retval = mem_ap_read_atomic_u32(dap, (dbgbase&0xFFFFF000) |
 						entry_offset, &romentry);
 		if (retval != ERROR_OK)
@@ -1154,6 +1265,8 @@ int dap_lookup_cs_component(struct adiv5_dap *dap, int ap,
 			retval = mem_ap_read_atomic_u32(dap,
 					(component_base & 0xfffff000) | 0xfcc,
 					&devtype);
+			if (retval != ERROR_OK)
+				return retval;
 			if ((devtype & 0xff) == type) {
 				*addr = component_base;
 				retval = ERROR_OK;
@@ -1172,7 +1285,7 @@ static int dap_info_command(struct command_context *cmd_ctx,
 		struct adiv5_dap *dap, int ap)
 {
 	int retval;
-	uint32_t dbgbase, apid;
+	uint32_t dbgbase = 0, apid = 0; /* Silence gcc by initializing */
 	int romtable_present = 0;
 	uint8_t mem_ap;
 	uint32_t ap_old;
@@ -1187,10 +1300,8 @@ static int dap_info_command(struct command_context *cmd_ctx,
 	/* Now we read ROM table ID registers, ref. ARM IHI 0029B sec  */
 	mem_ap = ((apid&0x10000) && ((apid&0x0F) != 0));
 	command_print(cmd_ctx, "AP ID register 0x%8.8" PRIx32, apid);
-	if (apid)
-	{
-		switch (apid&0x0F)
-		{
+	if (apid) {
+		switch (apid&0x0F) {
 			case 0:
 				command_print(cmd_ctx, "\tType is JTAG-AP");
 				break;
@@ -1209,18 +1320,13 @@ static int dap_info_command(struct command_context *cmd_ctx,
 		 * not a ROM table ... or have no such components at all.
 		 */
 		if (mem_ap)
-			command_print(cmd_ctx, "AP BASE 0x%8.8" PRIx32,
-					dbgbase);
-	}
-	else
-	{
+			command_print(cmd_ctx, "AP BASE 0x%8.8" PRIx32, dbgbase);
+	} else
 		command_print(cmd_ctx, "No AP found at this ap 0x%x", ap);
-	}
 
 	romtable_present = ((mem_ap) && (dbgbase != 0xFFFFFFFF));
-	if (romtable_present)
-	{
-		uint32_t cid0,cid1,cid2,cid3,memtype,romentry;
+	if (romtable_present) {
+		uint32_t cid0, cid1, cid2, cid3, memtype, romentry;
 		uint16_t entry_offset;
 
 		/* bit 16 of apid indicates a memory access port */
@@ -1264,78 +1370,61 @@ static int dap_info_command(struct command_context *cmd_ctx,
 
 		/* Now we read ROM table entries from dbgbase&0xFFFFF000) | 0x000 until we get 0x00000000 */
 		entry_offset = 0;
-		do
-		{
+		do {
 			retval = mem_ap_read_atomic_u32(dap, (dbgbase&0xFFFFF000) | entry_offset, &romentry);
 			if (retval != ERROR_OK)
 				return retval;
-			command_print(cmd_ctx, "\tROMTABLE[0x%x] = 0x%" PRIx32 "",entry_offset,romentry);
-			if (romentry&0x01)
-			{
+			command_print(cmd_ctx, "\tROMTABLE[0x%x] = 0x%" PRIx32 "", entry_offset, romentry);
+			if (romentry & 0x01) {
 				uint32_t c_cid0, c_cid1, c_cid2, c_cid3;
 				uint32_t c_pid0, c_pid1, c_pid2, c_pid3, c_pid4;
 				uint32_t component_base;
 				unsigned part_num;
 				char *type, *full;
 
-				component_base = (dbgbase & 0xFFFFF000)
-						+ (romentry & 0xFFFFF000);
+				component_base = (dbgbase & 0xFFFFF000) + (romentry & 0xFFFFF000);
 
 				/* IDs are in last 4K section */
-
-
-				retval = mem_ap_read_atomic_u32(dap,
-					component_base + 0xFE0, &c_pid0);
+				retval = mem_ap_read_atomic_u32(dap, component_base + 0xFE0, &c_pid0);
 				if (retval != ERROR_OK)
 					return retval;
 				c_pid0 &= 0xff;
-				retval = mem_ap_read_atomic_u32(dap,
-					component_base + 0xFE4, &c_pid1);
+				retval = mem_ap_read_atomic_u32(dap, component_base + 0xFE4, &c_pid1);
 				if (retval != ERROR_OK)
 					return retval;
 				c_pid1 &= 0xff;
-				retval = mem_ap_read_atomic_u32(dap,
-					component_base + 0xFE8, &c_pid2);
+				retval = mem_ap_read_atomic_u32(dap, component_base + 0xFE8, &c_pid2);
 				if (retval != ERROR_OK)
 					return retval;
 				c_pid2 &= 0xff;
-				retval = mem_ap_read_atomic_u32(dap,
-					component_base + 0xFEC, &c_pid3);
+				retval = mem_ap_read_atomic_u32(dap, component_base + 0xFEC, &c_pid3);
 				if (retval != ERROR_OK)
 					return retval;
 				c_pid3 &= 0xff;
-				retval = mem_ap_read_atomic_u32(dap,
-					component_base + 0xFD0, &c_pid4);
+				retval = mem_ap_read_atomic_u32(dap, component_base + 0xFD0, &c_pid4);
 				if (retval != ERROR_OK)
 					return retval;
 				c_pid4 &= 0xff;
 
-				retval = mem_ap_read_atomic_u32(dap,
-					component_base + 0xFF0, &c_cid0);
+				retval = mem_ap_read_atomic_u32(dap, component_base + 0xFF0, &c_cid0);
 				if (retval != ERROR_OK)
 					return retval;
 				c_cid0 &= 0xff;
-				retval = mem_ap_read_atomic_u32(dap,
-					component_base + 0xFF4, &c_cid1);
+				retval = mem_ap_read_atomic_u32(dap, component_base + 0xFF4, &c_cid1);
 				if (retval != ERROR_OK)
 					return retval;
 				c_cid1 &= 0xff;
-				retval = mem_ap_read_atomic_u32(dap,
-					component_base + 0xFF8, &c_cid2);
+				retval = mem_ap_read_atomic_u32(dap, component_base + 0xFF8, &c_cid2);
 				if (retval != ERROR_OK)
 					return retval;
 				c_cid2 &= 0xff;
-				retval = mem_ap_read_atomic_u32(dap,
-					component_base + 0xFFC, &c_cid3);
+				retval = mem_ap_read_atomic_u32(dap, component_base + 0xFFC, &c_cid3);
 				if (retval != ERROR_OK)
 					return retval;
 				c_cid3 &= 0xff;
 
-
-				command_print(cmd_ctx,
-				"\t\tComponent base address 0x%" PRIx32
-					", start address 0x%" PRIx32,
-						component_base,
+				command_print(cmd_ctx, "\t\tComponent base address 0x%" PRIx32 ","
+						"start address 0x%" PRIx32, component_base,
 				/* component may take multiple 4K pages */
 				component_base - 0x1000*(c_pid4 >> 4));
 				command_print(cmd_ctx, "\t\tComponent class is 0x%x, %s",
@@ -1458,7 +1547,7 @@ static int dap_info_command(struct command_context *cmd_ctx,
 
 				if (!is_dap_cid_ok(cid3, cid2, cid1, cid0))
 					command_print(cmd_ctx,
-						      "\t\tCID3 0%2.2x"
+							"\t\tCID3 0%2.2x"
 							", CID2 0%2.2x"
 							", CID1 0%2.2x"
 							", CID0 0%2.2x",
@@ -1497,11 +1586,15 @@ static int dap_info_command(struct command_context *cmd_ctx,
 					type = "Cortex-M3 FBP";
 					full = "(Flash Patch and Breakpoint)";
 					break;
+				case 0x00c:
+					type = "Cortex-M4 SCS";
+					full = "(System Control Space)";
+					break;
 				case 0x00d:
 					type = "CoreSight ETM11";
 					full = "(Embedded Trace)";
 					break;
-				// case 0x113: what?
+				/* case 0x113: what? */
 				case 0x120:		/* from OMAP3 memmap */
 					type = "TI SDTI";
 					full = "(System Debug Trace Interface)";
@@ -1546,9 +1639,17 @@ static int dap_info_command(struct command_context *cmd_ctx,
 					type = "Cortex-M3 ETM";
 					full = "(Embedded Trace)";
 					break;
+				case 0x925:
+					type = "Cortex-M4 ETM";
+					full = "(Embedded Trace)";
+					break;
 				case 0x930:
 					type = "Cortex-R4 ETM";
 					full = "(Embedded Trace)";
+					break;
+				case 0x9a1:
+					type = "Cortex-M4 TPUI";
+					full = "(Trace Port Interface Unit)";
 					break;
 				case 0xc08:
 					type = "Cortex-A8 Debug";
@@ -1561,9 +1662,7 @@ static int dap_info_command(struct command_context *cmd_ctx,
 				}
 				command_print(cmd_ctx, "\t\tPart is %s %s",
 						type, full);
-			}
-			else
-			{
+			} else {
 				if (romentry)
 					command_print(cmd_ctx, "\t\tComponent not present");
 				else
@@ -1571,11 +1670,8 @@ static int dap_info_command(struct command_context *cmd_ctx,
 			}
 			entry_offset += 4;
 		} while (romentry > 0);
-	}
-	else
-	{
+	} else
 		command_print(cmd_ctx, "\tNo ROM table present");
-	}
 	dap_ap_select(dap, ap_old);
 
 	return ERROR_OK;
@@ -1619,7 +1715,7 @@ COMMAND_HANDLER(dap_baseaddr_command)
 		COMMAND_PARSE_NUMBER(u32, CMD_ARGV[0], apsel);
 		/* AP address is in bits 31:24 of DP_SELECT */
 		if (apsel >= 256)
-			return ERROR_INVALID_ARGUMENTS;
+			return ERROR_COMMAND_SYNTAX_ERROR;
 		break;
 	default:
 		return ERROR_COMMAND_SYNTAX_ERROR;
@@ -1687,7 +1783,7 @@ COMMAND_HANDLER(dap_apsel_command)
 		COMMAND_PARSE_NUMBER(u32, CMD_ARGV[0], apsel);
 		/* AP address is in bits 31:24 of DP_SELECT */
 		if (apsel >= 256)
-			return ERROR_INVALID_ARGUMENTS;
+			return ERROR_COMMAND_SYNTAX_ERROR;
 		break;
 	default:
 		return ERROR_COMMAND_SYNTAX_ERROR;
@@ -1726,7 +1822,7 @@ COMMAND_HANDLER(dap_apid_command)
 		COMMAND_PARSE_NUMBER(u32, CMD_ARGV[0], apsel);
 		/* AP address is in bits 31:24 of DP_SELECT */
 		if (apsel >= 256)
-			return ERROR_INVALID_ARGUMENTS;
+			return ERROR_COMMAND_SYNTAX_ERROR;
 		break;
 	default:
 		return ERROR_COMMAND_SYNTAX_ERROR;
@@ -1795,9 +1891,8 @@ const struct command_registration dap_command_handlers[] = {
 		.name = "dap",
 		.mode = COMMAND_EXEC,
 		.help = "DAP command group",
+		.usage = "",
 		.chain = dap_commands,
 	},
 	COMMAND_REGISTRATION_DONE
 };
-
-

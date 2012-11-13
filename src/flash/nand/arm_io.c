@@ -30,7 +30,6 @@
 #include <target/arm.h>
 #include <target/algorithm.h>
 
-
 /**
  * Copies code to a working area.  This will allocate room for the code plus the
  * additional amount requested if the working area pointer is null.
@@ -44,8 +43,8 @@
  * @return Success or failure of the operation
  */
 static int arm_code_to_working_area(struct target *target,
-		const uint32_t *code, unsigned code_size,
-		unsigned additional, struct working_area **area)
+	const uint32_t *code, unsigned code_size,
+	unsigned additional, struct working_area **area)
 {
 	uint8_t code_buf[code_size];
 	unsigned i;
@@ -61,7 +60,7 @@ static int arm_code_to_working_area(struct target *target,
 	if (NULL == *area) {
 		retval = target_alloc_working_area(target, size, area);
 		if (retval != ERROR_OK) {
-			LOG_DEBUG("%s: no %d byte buffer", __FUNCTION__, (int) size);
+			LOG_DEBUG("%s: no %d byte buffer", __func__, (int) size);
 			return ERROR_NAND_NO_BUFFER;
 		}
 	}
@@ -95,13 +94,13 @@ static int arm_code_to_working_area(struct target *target,
  */
 int arm_nandwrite(struct arm_nand_data *nand, uint8_t *data, int size)
 {
-	struct target		*target = nand->target;
-	struct arm_algorithm	algo;
-	struct arm		*armv4_5 = target->arch_info;
-	struct reg_param	reg_params[3];
-	uint32_t		target_buf;
-	uint32_t		exit_var = 0;
-	int			retval;
+	struct target *target = nand->target;
+	struct arm_algorithm algo;
+	struct arm *arm = target->arch_info;
+	struct reg_param reg_params[3];
+	uint32_t target_buf;
+	uint32_t exit_var = 0;
+	int retval;
 
 	/* Inputs:
 	 *  r0	NAND data address (byte wide)
@@ -121,9 +120,8 @@ int arm_nandwrite(struct arm_nand_data *nand, uint8_t *data, int size)
 	if (nand->op != ARM_NAND_WRITE || !nand->copy_area) {
 		retval = arm_code_to_working_area(target, code, sizeof(code),
 				nand->chunk_size, &nand->copy_area);
-		if (retval != ERROR_OK) {
+		if (retval != ERROR_OK)
 			return retval;
-		}
 	}
 
 	nand->op = ARM_NAND_WRITE;
@@ -152,7 +150,7 @@ int arm_nandwrite(struct arm_nand_data *nand, uint8_t *data, int size)
 	buf_set_u32(reg_params[2].value, 0, 32, size);
 
 	/* armv4 must exit using a hardware breakpoint */
-	if (armv4_5->is_armv4)
+	if (arm->is_armv4)
 		exit_var = nand->copy_area->address + sizeof(code) - 4;
 
 	/* use alg to write data from work area to NAND chip */
@@ -181,7 +179,7 @@ int arm_nandread(struct arm_nand_data *nand, uint8_t *data, uint32_t size)
 {
 	struct target *target = nand->target;
 	struct arm_algorithm algo;
-	struct arm *armv4_5 = target->arch_info;
+	struct arm *arm = target->arch_info;
 	struct reg_param reg_params[3];
 	uint32_t target_buf;
 	uint32_t exit_var = 0;
@@ -206,9 +204,8 @@ int arm_nandread(struct arm_nand_data *nand, uint8_t *data, uint32_t size)
 	if (nand->op != ARM_NAND_READ || !nand->copy_area) {
 		retval = arm_code_to_working_area(target, code, sizeof(code),
 				nand->chunk_size, &nand->copy_area);
-		if (retval != ERROR_OK) {
+		if (retval != ERROR_OK)
 			return retval;
-		}
 	}
 
 	nand->op = ARM_NAND_READ;
@@ -228,7 +225,7 @@ int arm_nandread(struct arm_nand_data *nand, uint8_t *data, uint32_t size)
 	buf_set_u32(reg_params[2].value, 0, 32, size);
 
 	/* armv4 must exit using a hardware breakpoint */
-	if (armv4_5->is_armv4)
+	if (arm->is_armv4)
 		exit_var = nand->copy_area->address + sizeof(code) - 4;
 
 	/* use alg to write data from NAND chip to work area */
@@ -246,4 +243,3 @@ int arm_nandread(struct arm_nand_data *nand, uint8_t *data, uint32_t size)
 
 	return retval;
 }
-

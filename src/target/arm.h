@@ -23,6 +23,7 @@
  * Free Software Foundation, Inc.,
  * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
+
 #ifndef ARM_H
 #define ARM_H
 
@@ -124,6 +125,9 @@ struct arm {
 	/** Flag reporting unavailability of the BKPT instruction. */
 	bool is_armv4;
 
+	/** Flag reporting armv6m based core. */
+	bool is_armv6m;
+
 	/** Flag reporting whether semihosting is active. */
 	bool is_semihosting;
 
@@ -176,12 +180,14 @@ struct arm {
 /** Convert target handle to generic ARM target state handle. */
 static inline struct arm *target_to_arm(struct target *target)
 {
+	assert(target != NULL);
 	return target->arch_info;
 }
 
 static inline bool is_arm(struct arm *arm)
 {
-	return arm && arm->common_magic == ARM_COMMON_MAGIC;
+	assert(arm != NULL);
+	return arm->common_magic == ARM_COMMON_MAGIC;
 }
 
 struct arm_algorithm {
@@ -195,7 +201,7 @@ struct arm_reg {
 	int num;
 	enum arm_mode mode;
 	struct target *target;
-	struct arm *armv4_5_common;
+	struct arm *arm;
 	uint32_t value;
 };
 
@@ -230,8 +236,6 @@ int arm_blank_check_memory(struct target *target,
 
 void arm_set_cpsr(struct arm *arm, uint32_t cpsr);
 struct reg *arm_reg_current(struct arm *arm, unsigned regnum);
-
-void arm_endianness(uint8_t *tmp, void *in, int size, int be, int flip);
 
 extern struct reg arm_gdb_dummy_fp_reg;
 extern struct reg arm_gdb_dummy_fps_reg;

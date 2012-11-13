@@ -20,6 +20,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
+
 #ifndef ARM966E_H
 #define ARM966E_H
 
@@ -27,8 +28,7 @@
 
 #define	ARM966E_COMMON_MAGIC 0x20f920f9
 
-struct arm966e_common
-{
+struct arm966e_common {
 	struct arm7_9_common arm7_9_common;
 	int common_magic;
 	uint32_t cp15_control_reg;
@@ -38,7 +38,7 @@ static inline struct arm966e_common *
 target_to_arm966(struct target *target)
 {
 	return container_of(target->arch_info, struct arm966e_common,
-			arm7_9_common.armv4_5_common);
+			arm7_9_common.arm);
 }
 
 int arm966e_init_arch_info(struct target *target,

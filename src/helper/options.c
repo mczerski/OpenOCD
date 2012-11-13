@@ -20,32 +20,32 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
 
 #include "configuration.h"
-// @todo the inclusion of server.h here is a layering violation
+/* @todo the inclusion of server.h here is a layering violation */
 #include <server/server.h>
 
 #include <getopt.h>
 
 static int help_flag, version_flag;
 
-static const struct option long_options[] =
-{
-	{"help",	no_argument,		&help_flag,	1},
-	{"version",	no_argument,		&version_flag,	1},
-	{"debug",	optional_argument,	0,		'd'},
-	{"file",	required_argument,	0,		'f'},
-	{"search",	required_argument,	0,		's'},
-	{"log_output",	required_argument,	0,	'l'},
-	{"command",	required_argument,	0,		'c'},
-	{"pipe",	no_argument,		0,		'p'},
+static const struct option long_options[] = {
+	{"help",		no_argument,			&help_flag,		1},
+	{"version",		no_argument,			&version_flag,	1},
+	{"debug",		optional_argument,		0,				'd'},
+	{"file",		required_argument,		0,				'f'},
+	{"search",		required_argument,		0,				's'},
+	{"log_output",	required_argument,		0,				'l'},
+	{"command",		required_argument,		0,				'c'},
+	{"pipe",		no_argument,			0,				'p'},
 	{0, 0, 0, 0}
 };
 
-int configuration_output_handler(struct command_context *context, const char* line)
+int configuration_output_handler(struct command_context *context, const char *line)
 {
 	LOG_USER_N("%s", line);
 
@@ -55,45 +55,52 @@ int configuration_output_handler(struct command_context *context, const char* li
 static void add_default_dirs(void)
 {
 #ifdef _WIN32
+	char strExePath[MAX_PATH];
+	char *path;
+	GetModuleFileName(NULL, strExePath, MAX_PATH);
+
+	/* Strip executable file name, leaving path */
+	*strrchr(strExePath, '\\') = '\0';
+
+	/* Convert path separators to UNIX style, should work on Windows also. */
+	for (char *p = strExePath; *p; p++) {
+		if (*p == '\\')
+			*p = '/';
+	}
+
 	/* Add the parent of the directory where openocd.exe resides to the
 	 * config script search path.
-	 * Directory layout:
-	 * bin\openocd.exe
-	 * lib\openocd
-	 * event\at91eb40a_reset.cfg
-	 * target\at91eb40a.cfg
+	 *
+	 * bin/openocd.exe
+	 * interface/dummy.cfg
+	 * target/at91eb40a.cfg
 	 */
-	{
-		char strExePath [MAX_PATH];
-		GetModuleFileName (NULL, strExePath, MAX_PATH);
-		/* Either this code will *always* work or it will SEGFAULT giving
-		 * excellent information on the culprit.
-		 */
-		*strrchr(strExePath, '\\') = 0;
-		strcat(strExePath, "\\..");
-		add_script_search_dir(strExePath);
+	path = alloc_printf("%s%s", strExePath, "/..");
+	if (path) {
+		add_script_search_dir(path);
+		free(path);
 	}
-	/*
-	 * Add support for the default (as of 20091118) layout when
-	 * using autotools and cygwin/MinGW to build native binary.
-	 * Path separator is converted to UNIX style so that MinGW is
-	 * pleased.
+	/* Add support for the directory layout resulting from a 'make install'.
 	 *
 	 * bin/openocd.exe
 	 * share/openocd/scripts/interface/dummy.cfg
 	 * share/openocd/scripts/target/at91eb40a.cfg
 	 */
-	{
-		char strExePath [MAX_PATH];
-		char *p;
-		GetModuleFileName (NULL, strExePath, MAX_PATH);
-		*strrchr(strExePath, '\\') = 0;
-		strcat(strExePath, "/../share/"PACKAGE"/scripts");
-		for (p = strExePath; *p; p++) {
-			if (*p == '\\')
-				*p = '/';
-		}
-		add_script_search_dir(strExePath);
+	path = alloc_printf("%s%s", strExePath, "/../share/" PACKAGE "/scripts");
+	if (path) {
+		add_script_search_dir(path);
+		free(path);
+	}
+	/* Add single "scripts" folder to search path for Windows OpenOCD builds that don't use cygwin
+	 *
+	 * bin/openocd.exe
+	 * scripts/interface/dummy.cfg
+	 * scripts/target/at91eb40a.cfg
+	 */
+	path = alloc_printf("%s%s", strExePath, "/../scripts");
+	if (path) {
+		add_script_search_dir(path);
+		free(path);
 	}
 #else
 	/*
@@ -104,14 +111,12 @@ static void add_default_dirs(void)
 
 	const char *home = getenv("HOME");
 
-	if (home)
-	{
+	if (home) {
 		char *path;
 
 		path = alloc_printf("%s/.openocd", home);
 
-		if (path)
-	        {
+		if (path) {
 			add_script_search_dir(path);
 			free(path);
 		}
@@ -127,8 +132,7 @@ int parse_cmdline_args(struct command_context *cmd_ctx, int argc, char *argv[])
 	int c;
 	char command_buffer[128];
 
-	while (1)
-	{
+	while (1) {
 		/* getopt_long stores the option index here. */
 		int option_index = 0;
 
@@ -138,56 +142,52 @@ int parse_cmdline_args(struct command_context *cmd_ctx, int argc, char *argv[])
 		if (c == -1)
 			break;
 
-		switch (c)
-		{
+		switch (c) {
 			case 0:
 				break;
-			case 'h':	/* --help | -h */
+			case 'h':		/* --help | -h */
 				help_flag = 1;
 				break;
-			case 'v':	/* --version | -v */
+			case 'v':		/* --version | -v */
 				version_flag = 1;
 				break;
-			case 'f':	/* --file | -f */
+			case 'f':		/* --file | -f */
 			{
 				snprintf(command_buffer, 128, "script {%s}", optarg);
 				add_config_command(command_buffer);
 				break;
 			}
-			case 's':	/* --search | -s */
+			case 's':		/* --search | -s */
 				add_script_search_dir(optarg);
 				break;
-			case 'd':	/* --debug | -d */
+			case 'd':		/* --debug | -d */
 				if (optarg)
 					snprintf(command_buffer, 128, "debug_level %s", optarg);
 				else
 					snprintf(command_buffer, 128, "debug_level 3");
 				command_run_line(cmd_ctx, command_buffer);
 				break;
-			case 'l':	/* --log_output | -l */
-				if (optarg)
-				{
+			case 'l':		/* --log_output | -l */
+				if (optarg) {
 					snprintf(command_buffer, 128, "log_output %s", optarg);
 					command_run_line(cmd_ctx, command_buffer);
 				}
 				break;
-			case 'c':	/* --command | -c */
+			case 'c':		/* --command | -c */
 				if (optarg)
-				{
-					add_config_command(optarg);
-				}
+				    add_config_command(optarg);
 				break;
 			case 'p':
 				/* to replicate the old syntax this needs to be synchronous
 				 * otherwise the gdb stdin will overflow with the warning message */
 				command_run_line(cmd_ctx, "gdb_port pipe; log_output openocd.log");
-				LOG_WARNING("deprecated option: -p/--pipe. Use '-c \"gdb_port pipe; log_output openocd.log\"' instead.");
+				LOG_WARNING("deprecated option: -p/--pipe. Use '-c \"gdb_port pipe; "
+						"log_output openocd.log\"' instead.");
 				break;
 		}
 	}
 
-	if (help_flag)
-	{
+	if (help_flag) {
 		LOG_OUTPUT("Open On-Chip Debugger\nLicensed under GNU GPL v2\n");
 		LOG_OUTPUT("--help       | -h\tdisplay this help\n");
 		LOG_OUTPUT("--version    | -v\tdisplay OpenOCD version\n");
@@ -199,10 +199,9 @@ int parse_cmdline_args(struct command_context *cmd_ctx, int argc, char *argv[])
 		exit(-1);
 	}
 
-	if (version_flag)
-	{
+	if (version_flag) {
 		/* Nothing to do, version gets printed automatically. */
-		// It is not an error to request the VERSION number.
+		/* It is not an error to request the VERSION number. */
 		exit(0);
 	}
 

@@ -4,6 +4,9 @@
  *                                                                         *
  *   Copyright (C) 2008 by David T.L. Wong                                 *
  *                                                                         *
+ *   Copyright (C) 2011 by Drasko DRASKOVIC                                *
+ *   drasko.draskovic@gmail.com                                            *
+ *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
  *   the Free Software Foundation; either version 2 of the License, or     *
@@ -23,15 +26,12 @@
 #ifndef MIPS_M4K_H
 #define MIPS_M4K_H
 
-#include <helper/types.h>
-
 struct target;
 
 #define MIPSM4K_COMMON_MAGIC	0xB321B321
 
-struct mips_m4k_common
-{
-	int common_magic;
+struct mips_m4k_common {
+	uint32_t common_magic;
 	bool is_pic32mx;
 	struct mips32_common mips32;
 };
@@ -42,5 +42,7 @@ target_to_m4k(struct target *target)
 	return container_of(target->arch_info,
 			struct mips_m4k_common, mips32);
 }
+
+extern const struct command_registration mips_m4k_command_handlers[];
 
 #endif	/*MIPS_M4K_H*/

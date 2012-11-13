@@ -39,37 +39,38 @@
 #endif
 
 #include "imp.h"
+#include "spi.h"
 #include <jtag/jtag.h>
 #include <helper/time_support.h>
 
 #define SMI_READ_REG(a) (_SMI_READ_REG(a))
-#define _SMI_READ_REG(a)        	\
-{	                                \
-	int __a;                        \
-	uint32_t __v;                   \
-	                                \
+#define _SMI_READ_REG(a)			\
+{									\
+	int __a;						\
+	uint32_t __v;					\
+									\
 	__a = target_read_u32(target, io_base + (a), &__v); \
-	if (__a != ERROR_OK)            \
-	    return __a;                 \
-	__v;                            \
+	if (__a != ERROR_OK)			\
+		return __a;					\
+	__v;							\
 }
 
-#define SMI_WRITE_REG(a,v)      	\
-{	                                \
-	int __r;                        \
-	                                \
+#define SMI_WRITE_REG(a, v)			\
+{									\
+	int __r;						\
+									\
 	__r = target_write_u32(target, io_base + (a), (v)); \
-	if (__r != ERROR_OK)            \
-	    return __r;                 \
+	if (__r != ERROR_OK)			\
+		return __r;					\
 }
 
-#define SMI_POLL_TFF(timeout)   	\
-{	                                \
-	int __r;                        \
-	                                \
+#define SMI_POLL_TFF(timeout)		\
+{									\
+	int __r;						\
+									\
 	__r = poll_tff(target, io_base, timeout); \
-	if (__r != ERROR_OK)            \
-	    return __r;                 \
+	if (__r != ERROR_OK)			\
+		return __r;					\
 }
 
 #define SMI_SET_SW_MODE()	SMI_WRITE_REG(SMI_CR1, \
@@ -105,8 +106,6 @@
 #define SMI_SEL_BANK3     0x00003000 /* Select Bank3 */
 
 /* fields in SMI_SR */
-#define SMI_WIP_BIT       0x00000001 /* WIP Bit of SPI SR on SMI SR */
-#define SMI_WEL_BIT       0x00000002 /* WEL Bit of SPI SR on SMI SR */
 #define SMI_TFF           0x00000100 /* Transfer Finished Flag */
 
 /* Commands */
@@ -117,71 +116,11 @@
 #define SMI_PROBE_TIMEOUT (100)
 #define SMI_MAX_TIMEOUT  (3000)
 
-struct stmsmi_flash_bank
-{
+struct stmsmi_flash_bank {
 	int probed;
 	uint32_t io_base;
 	uint32_t bank_num;
 	struct flash_device *dev;
-};
-
-/* data structure to maintain flash ids from different vendors */
-struct flash_device {
-	char *name;
-	uint8_t erase_cmd;
-	uint32_t device_id;
-	uint32_t pagesize;
-	unsigned long sectorsize;
-	unsigned long size_in_bytes;
-};
-
-#define FLASH_ID(n, es, id, psize, ssize, size) \
-{	                        \
-	.name = n,              \
-	.erase_cmd = es,        \
-	.device_id = id,        \
-	.pagesize = psize,      \
-	.sectorsize = ssize,    \
-	.size_in_bytes = size   \
-}
-
-/* List below is taken from Linux driver. It is not exhaustive of all the
- * possible SPI memories, nor exclusive for SMI. Could be shared with
- * other SPI drivers. */
-static struct flash_device flash_devices[] = {
-	/* name, erase_cmd, device_id, pagesize, sectorsize, size_in_bytes */
-	FLASH_ID("st m25p05",      0xd8, 0x00102020, 0x80,  0x8000,  0x10000),
-	FLASH_ID("st m25p10",      0xd8, 0x00112020, 0x80,  0x8000,  0x20000),
-	FLASH_ID("st m25p20",      0xd8, 0x00122020, 0x100, 0x10000, 0x40000),
-	FLASH_ID("st m25p40",      0xd8, 0x00132020, 0x100, 0x10000, 0x80000),
-	FLASH_ID("st m25p80",      0xd8, 0x00142020, 0x100, 0x10000, 0x100000),
-	FLASH_ID("st m25p16",      0xd8, 0x00152020, 0x100, 0x10000, 0x200000),
-	FLASH_ID("st m25p32",      0xd8, 0x00162020, 0x100, 0x10000, 0x400000),
-	FLASH_ID("st m25p64",      0xd8, 0x00172020, 0x100, 0x10000, 0x800000),
-	FLASH_ID("st m25p128",     0xd8, 0x00182020, 0x100, 0x40000, 0x1000000),
-	FLASH_ID("st m45pe10",     0xd8, 0x00114020, 0x100, 0x10000, 0x20000),
-	FLASH_ID("st m45pe20",     0xd8, 0x00124020, 0x100, 0x10000, 0x40000),
-	FLASH_ID("st m45pe40",     0xd8, 0x00134020, 0x100, 0x10000, 0x80000),
-	FLASH_ID("st m45pe80",     0xd8, 0x00144020, 0x100, 0x10000, 0x100000),
-	FLASH_ID("sp s25fl004",    0xd8, 0x00120201, 0x100, 0x10000, 0x80000),
-	FLASH_ID("sp s25fl008",    0xd8, 0x00130201, 0x100, 0x10000, 0x100000),
-	FLASH_ID("sp s25fl016",    0xd8, 0x00140201, 0x100, 0x10000, 0x200000),
-	FLASH_ID("sp s25fl032",    0xd8, 0x00150201, 0x100, 0x10000, 0x400000),
-	FLASH_ID("sp s25fl064",    0xd8, 0x00160201, 0x100, 0x10000, 0x800000),
-	FLASH_ID("atmel 25f512",   0x52, 0x0065001f, 0x80,  0x8000,  0x10000),
-	FLASH_ID("atmel 25f1024",  0x52, 0x0060001f, 0x100, 0x8000,  0x20000),
-	FLASH_ID("atmel 25f2048",  0x52, 0x0063001f, 0x100, 0x10000, 0x40000),
-	FLASH_ID("atmel 25f4096",  0x52, 0x0064001f, 0x100, 0x10000, 0x80000),
-	FLASH_ID("atmel 25fs040",  0xd7, 0x0004661f, 0x100, 0x10000, 0x80000),
-	FLASH_ID("mac 25l512",     0xd8, 0x001020c2, 0x010, 0x10000, 0x10000),
-	FLASH_ID("mac 25l1005",    0xd8, 0x001120c2, 0x010, 0x10000, 0x20000),
-	FLASH_ID("mac 25l2005",    0xd8, 0x001220c2, 0x010, 0x10000, 0x40000),
-	FLASH_ID("mac 25l4005",    0xd8, 0x001320c2, 0x010, 0x10000, 0x80000),
-	FLASH_ID("mac 25l8005",    0xd8, 0x001420c2, 0x010, 0x10000, 0x100000),
-	FLASH_ID("mac 25l1605",    0xd8, 0x001520c2, 0x100, 0x10000, 0x200000),
-	FLASH_ID("mac 25l3205",    0xd8, 0x001620c2, 0x100, 0x10000, 0x400000),
-	FLASH_ID("mac 25l6405",    0xd8, 0x001720c2, 0x100, 0x10000, 0x800000),
-	FLASH_ID(NULL,             0,    0,          0,     0,       0)
 };
 
 struct stmsmi_target {
@@ -202,17 +141,13 @@ FLASH_BANK_COMMAND_HANDLER(stmsmi_flash_bank_command)
 {
 	struct stmsmi_flash_bank *stmsmi_info;
 
-	LOG_DEBUG("%s", __FUNCTION__);
+	LOG_DEBUG("%s", __func__);
 
 	if (CMD_ARGC < 6)
-	{
-		LOG_WARNING("incomplete flash_bank stmsmi configuration");
-		return ERROR_FLASH_BANK_INVALID;
-	}
+		return ERROR_COMMAND_SYNTAX_ERROR;
 
 	stmsmi_info = malloc(sizeof(struct stmsmi_flash_bank));
-	if (stmsmi_info == NULL)
-	{
+	if (stmsmi_info == NULL) {
 		LOG_ERROR("not enough memory");
 		return ERROR_FAIL;
 	}
@@ -280,17 +215,17 @@ static int wait_till_ready(struct flash_bank *bank, int timeout)
 	int retval;
 	long long endtime;
 
-    endtime = timeval_ms() + timeout;
-    do {
-        /* read flash status register */
-        retval = read_status_reg(bank, &status);
-        if (retval != ERROR_OK)
-            return retval;
+	endtime = timeval_ms() + timeout;
+	do {
+		/* read flash status register */
+		retval = read_status_reg(bank, &status);
+		if (retval != ERROR_OK)
+			return retval;
 
-		if ((status & SMI_WIP_BIT) == 0)
+		if ((status & SPIFLASH_BSY_BIT) == 0)
 			return ERROR_OK;
 		alive_sleep(1);
-    } while (timeval_ms() < endtime);
+	} while (timeval_ms() < endtime);
 
 	LOG_ERROR("timeout");
 	return ERROR_FAIL;
@@ -325,8 +260,7 @@ static int smi_write_enable(struct flash_bank *bank)
 		return retval;
 
 	/* Check write enabled */
-	if ((status & SMI_WEL_BIT) == 0)
-	{
+	if ((status & SPIFLASH_WE_BIT) == 0) {
 		LOG_ERROR("Cannot enable write to flash. Status=0x%08" PRIx32, status);
 		return ERROR_FAIL;
 	}
@@ -392,37 +326,31 @@ static int stmsmi_erase(struct flash_bank *bank, int first, int last)
 	int retval = ERROR_OK;
 	int sector;
 
-	LOG_DEBUG("%s: from sector %d to sector %d", __FUNCTION__, first, last);
+	LOG_DEBUG("%s: from sector %d to sector %d", __func__, first, last);
 
-	if (target->state != TARGET_HALTED)
-	{
+	if (target->state != TARGET_HALTED) {
 		LOG_ERROR("Target not halted");
 		return ERROR_TARGET_NOT_HALTED;
 	}
 
-	if ((first < 0) || (last < first) || (last >= bank->num_sectors))
-	{
+	if ((first < 0) || (last < first) || (last >= bank->num_sectors)) {
 		LOG_ERROR("Flash sector invalid");
 		return ERROR_FLASH_SECTOR_INVALID;
 	}
 
-	if (!(stmsmi_info->probed))
-	{
+	if (!(stmsmi_info->probed)) {
 		LOG_ERROR("Flash bank not probed");
 		return ERROR_FLASH_BANK_NOT_PROBED;
 	}
 
-	for (sector = first; sector <= last; sector++)
-	{
-		if (bank->sectors[sector].is_protected)
-		{
+	for (sector = first; sector <= last; sector++) {
+		if (bank->sectors[sector].is_protected) {
 			LOG_ERROR("Flash sector %d protected", sector);
 			return ERROR_FAIL;
 		}
 	}
 
-	for (sector = first; sector <= last; sector++)
-	{
+	for (sector = first; sector <= last; sector++) {
 		retval = smi_erase_sector(bank, sector);
 		if (retval != ERROR_OK)
 			break;
@@ -453,7 +381,7 @@ static int smi_write_buffer(struct flash_bank *bank, uint8_t *buffer,
 	int retval;
 
 	LOG_DEBUG("%s: address=0x%08" PRIx32 " len=0x%08" PRIx32,
-		__FUNCTION__, address, len);
+			__func__, address, len);
 
 	retval = smi_write_enable(bank);
 	if (retval != ERROR_OK)
@@ -480,30 +408,26 @@ static int stmsmi_write(struct flash_bank *bank, uint8_t *buffer,
 	int retval = ERROR_OK;
 
 	LOG_DEBUG("%s: offset=0x%08" PRIx32 " count=0x%08" PRIx32,
-		__FUNCTION__, offset, count);
+		__func__, offset, count);
 
-	if (target->state != TARGET_HALTED)
-	{
+	if (target->state != TARGET_HALTED) {
 		LOG_ERROR("Target not halted");
 		return ERROR_TARGET_NOT_HALTED;
 	}
 
-	if (offset + count > stmsmi_info->dev->size_in_bytes)
-	{
+	if (offset + count > stmsmi_info->dev->size_in_bytes) {
 		LOG_WARNING("Write pasts end of flash. Extra data discarded.");
 		count = stmsmi_info->dev->size_in_bytes - offset;
 	}
 
 	/* Check sector protection */
-	for (sector = 0; sector < bank->num_sectors; sector++)
-	{
+	for (sector = 0; sector < bank->num_sectors; sector++) {
 		/* Start offset in or before this sector? */
 		/* End offset in or behind this sector? */
-		if ( (offset <
+		if ((offset <
 				(bank->sectors[sector].offset + bank->sectors[sector].size))
 			&& ((offset + count - 1) >= bank->sectors[sector].offset)
-			&& bank->sectors[sector].is_protected )
-		{
+			&& bank->sectors[sector].is_protected) {
 			LOG_ERROR("Flash sector %d protected", sector);
 			return ERROR_FAIL;
 		}
@@ -512,8 +436,7 @@ static int stmsmi_write(struct flash_bank *bank, uint8_t *buffer,
 	page_size = stmsmi_info->dev->pagesize;
 
 	/* unaligned buffer head */
-	if (count > 0 && (offset & 3) != 0)
-	{
+	if (count > 0 && (offset & 3) != 0) {
 		cur_count = 4 - (offset & 3);
 		if (cur_count > count)
 			cur_count = count;
@@ -528,8 +451,7 @@ static int stmsmi_write(struct flash_bank *bank, uint8_t *buffer,
 
 	page_offset = offset % page_size;
 	/* central part, aligned words */
-	while (count >= 4)
-	{
+	while (count >= 4) {
 		/* clip block at page boundary */
 		if (page_offset + count > page_size)
 			cur_count = page_size - page_offset;
@@ -568,8 +490,7 @@ static int read_flash_id(struct flash_bank *bank, uint32_t *id)
 	uint32_t io_base = stmsmi_info->io_base;
 	int retval;
 
-	if (target->state != TARGET_HALTED)
-	{
+	if (target->state != TARGET_HALTED) {
 		LOG_ERROR("Target not halted");
 		return ERROR_TARGET_NOT_HALTED;
 	}
@@ -615,18 +536,16 @@ static int stmsmi_probe(struct flash_bank *bank)
 		free(bank->sectors);
 	stmsmi_info->probed = 0;
 
-	for (target_device=target_devices ; target_device->name ; ++target_device)
+	for (target_device = target_devices ; target_device->name ; ++target_device)
 		if (target_device->tap_idcode == target->tap->idcode)
 			break;
-	if (!target_device->name)
-	{
+	if (!target_device->name) {
 		LOG_ERROR("Device ID 0x%" PRIx32 " is not known as SMI capable",
 				target->tap->idcode);
 		return ERROR_FAIL;
 	}
 
-	switch (bank->base - target_device->smi_base)
-	{
+	switch (bank->base - target_device->smi_base) {
 		case 0:
 			stmsmi_info->bank_num = SMI_SEL_BANK0;
 			break;
@@ -662,8 +581,7 @@ static int stmsmi_probe(struct flash_bank *bank)
 			break;
 		}
 
-	if (!stmsmi_info->dev)
-	{
+	if (!stmsmi_info->dev) {
 		LOG_ERROR("Unknown flash device (ID 0x%08" PRIx32 ")", id);
 		return ERROR_FAIL;
 	}
@@ -678,14 +596,12 @@ static int stmsmi_probe(struct flash_bank *bank)
 	bank->num_sectors =
 		stmsmi_info->dev->size_in_bytes / stmsmi_info->dev->sectorsize;
 	sectors = malloc(sizeof(struct flash_sector) * bank->num_sectors);
-	if (sectors == NULL)
-	{
+	if (sectors == NULL) {
 		LOG_ERROR("not enough memory");
 		return ERROR_FAIL;
 	}
 
-	for (int sector = 0; sector < bank->num_sectors; sector++)
-	{
+	for (int sector = 0; sector < bank->num_sectors; sector++) {
 		sectors[sector].offset = sector * stmsmi_info->dev->sectorsize;
 		sectors[sector].size = stmsmi_info->dev->sectorsize;
 		sectors[sector].is_erased = -1;
@@ -714,20 +630,16 @@ static int stmsmi_protect_check(struct flash_bank *bank)
 static int get_stmsmi_info(struct flash_bank *bank, char *buf, int buf_size)
 {
 	struct stmsmi_flash_bank *stmsmi_info = bank->driver_priv;
-	int printed;
 
-	if (!(stmsmi_info->probed))
-	{
-		printed = snprintf(buf, buf_size,
+	if (!(stmsmi_info->probed)) {
+		snprintf(buf, buf_size,
 			"\nSMI flash bank not probed yet\n");
 		return ERROR_OK;
 	}
 
-	printed = snprintf(buf, buf_size, "\nSMI flash information:\n"
+	snprintf(buf, buf_size, "\nSMI flash information:\n"
 		"  Device \'%s\' (ID 0x%08x)\n",
 		stmsmi_info->dev->name, stmsmi_info->dev->device_id);
-	buf += printed;
-	buf_size -= printed;
 
 	return ERROR_OK;
 }

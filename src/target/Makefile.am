@@ -40,10 +40,9 @@ libtarget_la_SOURCES = \
 	$(OR1K_SRC) \
 	avrt.c \
 	dsp563xx.c \
-	dsp563xx_once.c
-
-# This file generates warnings, disabled for now, see also target.c
-#	dsp5680xx.c
+	dsp563xx_once.c \
+	dsp5680xx.c \
+	stm32_stlink.c
 
 TARGET_CORE_SRC = \
 	algorithm.c \
@@ -82,7 +81,7 @@ ARMV6_SRC = \
 
 ARMV7_SRC = \
 	armv7m.c \
-	cortex_m3.c \
+	cortex_m.c \
 	armv7a.c \
 	cortex_a.c
 
@@ -149,7 +148,7 @@ noinst_HEADERS = \
 	dsp563xx_once.h \
 	dsp5680xx.h \
 	breakpoints.h \
-	cortex_m3.h \
+	cortex_m.h \
 	cortex_a.h \
 	embeddedice.h \
 	etb.h \
@@ -177,7 +176,7 @@ noinst_HEADERS = \
 	or1k.h \
 	or1k_jtag.h
 
-nobase_dist_pkgdata_DATA =
-nobase_dist_pkgdata_DATA += ecos/at91eb40a.elf
+ocddatadir = $(pkglibdir)
+nobase_dist_ocddata_DATA =
 
 MAINTAINERCLEANFILES = $(srcdir)/Makefile.in

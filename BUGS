@@ -4,7 +4,7 @@
 Please report bugs by subscribing to the OpenOCD mailing list and
 posting a message with your report:
 
-	openocd-development@lists.berlios.de
+	openocd-devel@lists.sourceforge.net
 
 Also, please check the Trac bug database to see if a ticket for
 the bug has already been opened.  You might be asked to open
@@ -32,7 +32,7 @@ that may be important.
     http://www.kernel.org/pub/software/scm/git/docs/git-bisect.html
 
 If possible, please develop and attach a patch that helps to expose or
-solve the reported problem.  See the PATCHES.txt file for information
+solve the reported problem.  See the HACKING file for information
 about that process.
 
 Attach all files directly to your posting.  The mailing list knows to

@@ -27,6 +27,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -45,7 +46,7 @@
 extern struct jtag_interface zy1000_interface;
 #elif defined(BUILD_MINIDRIVER_DUMMY)
 extern struct jtag_interface minidummy_interface;
-#else // standard drivers
+#else /* standard drivers */
 #if BUILD_PARPORT == 1
 extern struct jtag_interface parport_interface;
 #endif
@@ -57,6 +58,9 @@ extern struct jtag_interface ft2232_interface;
 #endif
 #if BUILD_FT2232_LIBFTDI == 1
 extern struct jtag_interface ft2232_interface;
+#endif
+#if BUILD_FTDI == 1
+extern struct jtag_interface ftdi_interface;
 #endif
 #if BUILD_USB_BLASTER_LIBFTDI == 1 || BUILD_USB_BLASTER_FTD2XX == 1
 extern struct jtag_interface usb_blaster_interface;
@@ -100,7 +104,22 @@ extern struct jtag_interface armjtagew_interface;
 #if BUILD_BUSPIRATE == 1
 extern struct jtag_interface buspirate_interface;
 #endif
-#endif // standard drivers
+#if BUILD_REMOTE_BITBANG == 1
+extern struct jtag_interface remote_bitbang_interface;
+#endif
+#if BUILD_STLINK == 1
+extern struct jtag_interface stlink_interface;
+#endif
+#if BUILD_OSBDM == 1
+extern struct jtag_interface osbdm_interface;
+#endif
+#if BUILD_OPENDOUS == 1
+extern struct jtag_interface opendous_interface;
+#endif
+#if BUILD_SYSFSGPIO == 1
+extern struct jtag_interface sysfsgpio_interface;
+#endif
+#endif /* standard drivers */
 
 /**
  * The list of built-in JTAG interfaces, containing entries for those
@@ -114,7 +133,7 @@ struct jtag_interface *jtag_interfaces[] = {
 		&zy1000_interface,
 #elif defined(BUILD_MINIDRIVER_DUMMY)
 		&minidummy_interface,
-#else // standard drivers
+#else /* standard drivers */
 #if BUILD_PARPORT == 1
 		&parport_interface,
 #endif
@@ -126,6 +145,9 @@ struct jtag_interface *jtag_interfaces[] = {
 #endif
 #if BUILD_FT2232_LIBFTDI == 1
 		&ft2232_interface,
+#endif
+#if BUILD_FTDI == 1
+		&ftdi_interface,
 #endif
 #if BUILD_USB_BLASTER_LIBFTDI == 1 || BUILD_USB_BLASTER_FTD2XX == 1
 		&usb_blaster_interface,
@@ -169,11 +191,26 @@ struct jtag_interface *jtag_interfaces[] = {
 #if BUILD_BUSPIRATE == 1
 		&buspirate_interface,
 #endif
-#endif // standard drivers
+#if BUILD_REMOTE_BITBANG == 1
+		&remote_bitbang_interface,
+#endif
+#if BUILD_STLINK == 1
+		&stlink_interface,
+#endif
+#if BUILD_OSBDM == 1
+		&osbdm_interface,
+#endif
+#if BUILD_OPENDOUS == 1
+		&opendous_interface,
+#endif
+#if BUILD_SYSFSGPIO == 1
+		&sysfsgpio_interface,
+#endif
+#endif /* standard drivers */
 		NULL,
 	};
 
 void jtag_interface_modules_load(const char *path)
 {
-	// @todo: implement dynamic module loading for JTAG interface drivers
+	/* @todo: implement dynamic module loading for JTAG interface drivers */
 }

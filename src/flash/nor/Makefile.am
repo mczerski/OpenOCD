@@ -9,31 +9,34 @@ libocdflashnor_la_SOURCES = \
 
 NOR_DRIVERS = \
 	aduc702x.c \
+	at91sam4.c \
 	at91sam3.c \
 	at91sam7.c \
 	avrf.c \
 	cfi.c \
-	ecos.c \
 	em357.c \
 	faux.c \
 	lpc2000.c \
 	lpc288x.c \
 	lpc2900.c \
+	lpcspifi.c \
 	non_cfi.c \
 	ocl.c \
 	pic32mx.c \
+	spi.c \
 	stmsmi.c \
 	stellaris.c \
-	stm32x.c \
-	stm32f2xxx.c \
+	stm32f1x.c \
+	stm32f2x.c \
+	stm32lx.c \
 	str7x.c \
 	str9x.c \
 	str9xpec.c \
 	tms470.c \
-	virtual.c
-
-# Disabled for now, it generates warnings
-# dsp5680xx_flash.c 
+	virtual.c \
+	fm3.c \
+	dsp5680xx_flash.c \
+	kinetis.c
 
 noinst_HEADERS = \
 	core.h \
@@ -41,6 +44,7 @@ noinst_HEADERS = \
 	driver.h \
 	imp.h \
 	non_cfi.h \
-	ocl.h
+	ocl.h \
+	spi.h
 
 MAINTAINERCLEANFILES = $(srcdir)/Makefile.in

@@ -23,34 +23,29 @@
 
 #include <jtag/commands.h>
 
-static inline void interface_jtag_alloc_in_value32(struct scan_field *field)
-{
-	field->in_value = (uint8_t *)cmd_queue_alloc(4);
-}
-
 static inline void interface_jtag_add_scan_check_alloc(struct scan_field *field)
 {
 	unsigned num_bytes = DIV_ROUND_UP(field->num_bits, 8);
 	field->in_value = (uint8_t *)cmd_queue_alloc(num_bytes);
 }
 
-void interface_jtag_add_dr_out(struct jtag_tap* tap,
-		int num_fields, const int* num_bits, const uint32_t* value,
-		tap_state_t end_state);
+void interface_jtag_add_dr_out(struct jtag_tap *tap,
+			       int num_fields, const int *num_bits, const uint32_t *value,
+			       tap_state_t end_state);
 
 void interface_jtag_add_callback(jtag_callback1_t f, jtag_callback_data_t data0);
 
 void interface_jtag_add_callback4(jtag_callback_t f, jtag_callback_data_t data0,
-		jtag_callback_data_t data1, jtag_callback_data_t data2,
-		jtag_callback_data_t data3);
+				  jtag_callback_data_t data1, jtag_callback_data_t data2,
+				  jtag_callback_data_t data3);
 
-void jtag_add_dr_out(struct jtag_tap* tap,
-		int num_fields, const int* num_bits, const uint32_t* value,
-		tap_state_t end_state);
+void jtag_add_dr_out(struct jtag_tap *tap,
+		     int num_fields, const int *num_bits, const uint32_t *value,
+		     tap_state_t end_state);
 
 
 void jtag_add_callback4(jtag_callback_t f, jtag_callback_data_t data0,
-		jtag_callback_data_t data1, jtag_callback_data_t data2,
-		jtag_callback_data_t data3);
+			jtag_callback_data_t data1, jtag_callback_data_t data2,
+			jtag_callback_data_t data3);
 
-#endif // MINIDRIVER_IMP_H
+#endif	/* MINIDRIVER_IMP_H */

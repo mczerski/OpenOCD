@@ -17,16 +17,14 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
+
 #ifndef CFI_H
 #define CFI_H
 
 #define CFI_STATUS_POLL_MASK_DQ5_DQ6_DQ7 0xE0 /* DQ5..DQ7 */
 #define CFI_STATUS_POLL_MASK_DQ6_DQ7     0xC0 /* DQ6..DQ7 */
 
-struct cfi_flash_bank
-{
-	struct working_area *write_algorithm;
-
+struct cfi_flash_bank {
 	int x16_as_x8;
 	int jedec_probe;
 	int not_cfi;
@@ -80,8 +78,7 @@ struct cfi_flash_bank
  * as defined for the Advanced+ Boot Block Flash Memory (C3)
  * and used by the linux kernel cfi driver (as of 2.6.14)
  */
-struct cfi_intel_pri_ext
-{
+struct cfi_intel_pri_ext {
 	uint8_t pri[3];
 	uint8_t major_version;
 	uint8_t minor_version;
@@ -100,8 +97,7 @@ struct cfi_intel_pri_ext
 /* Spansion primary extended query table as defined for and used by
  * the linux kernel cfi driver (as of 2.6.15)
  */
-struct cfi_spansion_pri_ext
-{
+struct cfi_spansion_pri_ext {
 	uint8_t  pri[3];
 	uint8_t  major_version;
 	uint8_t  minor_version;
@@ -124,8 +120,7 @@ struct cfi_spansion_pri_ext
 /* Atmel primary extended query table as defined for and used by
  * the linux kernel cfi driver (as of 2.6.20+)
  */
-struct cfi_atmel_pri_ext
-{
+struct cfi_atmel_pri_ext {
 	uint8_t pri[3];
 	uint8_t major_version;
 	uint8_t minor_version;
@@ -140,14 +135,12 @@ enum {
 	CFI_UNLOCK_5555_2AAA,
 };
 
-struct cfi_unlock_addresses
-{
+struct cfi_unlock_addresses {
 	uint32_t unlock1;
 	uint32_t unlock2;
 };
 
-struct cfi_fixup
-{
+struct cfi_fixup {
 	uint16_t mfr;
 	uint16_t id;
 	void (*fixup)(struct flash_bank *bank, void *param);
@@ -161,6 +154,7 @@ struct cfi_fixup
 #define CFI_MFR_AMIC	0x0037
 #define CFI_MFR_SST		0x00BF
 #define CFI_MFR_MX		0x00C2
+#define CFI_MFR_EON		0x007F
 
 #define CFI_MFR_ANY		0xffff
 #define CFI_ID_ANY		0xffff

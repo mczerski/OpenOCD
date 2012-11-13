@@ -168,19 +168,19 @@ STM32x). Preliminary support for various NAND flash controllers
 
 The OpenOCD web site provides the latest public news from the community:
 
-@uref{http://openocd.berlios.de/web/}
+@uref{http://openocd.sourceforge.net/}
 
 @section Latest User's Guide:
 
 The user's guide you are now reading may not be the latest one
 available.  A version for more recent code may be available.
-Its HTML form is published irregularly at:
+Its HTML form is published regularly at:
 
-@uref{http://openocd.berlios.de/doc/html/index.html}
+@uref{http://openocd.sourceforge.net/doc/html/index.html}
 
 PDF form is likewise published at:
 
-@uref{http://openocd.berlios.de/doc/pdf/openocd.pdf}
+@uref{http://openocd.sourceforge.net/doc/pdf/openocd.pdf}
 
 @section OpenOCD User's Forum
 
@@ -192,6 +192,17 @@ instead of this forum.
 
 @uref{http://forum.sparkfun.com/viewforum.php?f=18}
 
+@section OpenOCD User's Mailing List
+
+The OpenOCD User Mailing List provides the primary means of
+communication between users:
+
+@uref{https://lists.sourceforge.net/mailman/listinfo/openocd-user}
+
+@section OpenOCD IRC
+
+Support can also be found on irc:
+@uref{irc://irc.freenode.net/openocd}
 
 @node Developers
 @chapter OpenOCD Developer Resources
@@ -241,7 +252,7 @@ providing a Doxygen reference manual.  This document contains more
 technical information about the software internals, development
 processes, and similar documentation:
 
-@uref{http://openocd.berlios.de/doc/doxygen/index.html}
+@uref{http://openocd.sourceforge.net/doc/doxygen/html/index.html}
 
 This document is a work-in-progress, but contributions would be welcome
 to fill in the gaps.  All of the source files are provided in-tree,
@@ -252,10 +263,10 @@ listed in the Doxyfile configuration in the top of the source tree.
 The OpenOCD Developer Mailing List provides the primary means of
 communication between developers:
 
-@uref{https://lists.berlios.de/mailman/listinfo/openocd-development}
+@uref{https://lists.sourceforge.net/mailman/listinfo/openocd-devel}
 
 Discuss and submit patches to this list.
-The @file{PATCHES.txt} file contains basic information about how
+The @file{HACKING} file contains basic information about how
 to prepare patches.
 
 @section OpenOCD Bug Database
@@ -309,7 +320,7 @@ RTCK support? Also known as ``adaptive clocking''
 
 @section Stand alone Systems
 
-@b{ZY1000} See: @url{http://www.zylin.com/zy1000.html} Technically, not a
+@b{ZY1000} See: @url{http://www.ultsol.com/index.php/component/content/article/8/33-zylin-zy1000-jtag-probe} Technically, not a
 dongle, but a standalone box. The ZY1000 has the advantage that it does
 not require any drivers installed on the developer PC. It also has
 a built in web interface. It supports RTCK/RCLK or adaptive clocking
@@ -336,7 +347,7 @@ a built-in low cost debug adapter and usb-to-serial solution.
 
 @itemize @bullet
 @item @b{usbjtag}
-@* Link @url{http://www.hs-augsburg.de/~hhoegl/proj/usbjtag/usbjtag.html}
+@* Link @url{http://elk.informatik.fh-augsburg.de/hhweb/doc/openocd/usbjtag/usbjtag.html}
 @item @b{jtagkey}
 @* See: @url{http://www.amontec.com/jtagkey.shtml}
 @item @b{jtagkey2}
@@ -358,7 +369,7 @@ Evaluation Kits.  Like the non-detachable FT2232 support on the other
 Stellaris eval boards, they can be used to debug other target boards.
 @item @b{olimex-jtag}
 @* See: @url{http://www.olimex.com}
-@item @b{flyswatter}
+@item @b{Flyswatter/Flyswatter2}
 @* See: @url{http://www.tincantools.com}
 @item @b{turtelizer2}
 @* See:
@@ -369,9 +380,14 @@ Stellaris eval boards, they can be used to debug other target boards.
 @item @b{stm32stick}
 @* Link @url{http://www.hitex.com/stm32-stick}
 @item @b{axm0432_jtag}
-@* Axiom AXM-0432 Link @url{http://www.axman.com}
+@* Axiom AXM-0432 Link @url{http://www.axman.com} - NOTE:  This JTAG does not appear
+to be available anymore as of April 2012.
 @item @b{cortino}
 @* Link @url{http://www.hitex.com/index.php?id=cortino}
+@item @b{dlp-usb1232h}
+@* Link @url{http://www.dlpdesign.com/usb/usb1232h.shtml}
+@item @b{digilent-hs1}
+@* Link @url{http://www.digilentinc.com/Products/Detail.cfm?Prod=JTAG-HS1}
 @end itemize
 
 @section USB-JTAG / Altera USB-Blaster compatibles
@@ -388,7 +404,7 @@ product.  The driver can be configured to search for any VID/PID pair
 
 @itemize
 @item @b{USB-JTAG} Kolja Waschk's USB Blaster-compatible adapter
-@* Link: @url{http://www.ixo.de/info/usb_jtag/}
+@* Link: @url{http://ixo-jtag.sourceforge.net/}
 @item @b{Altera USB-Blaster}
 @* Link: @url{http://www.altera.com/literature/ug/ug_usb_blstr.pdf}
 @end itemize
@@ -404,7 +420,7 @@ AT91SAM764 internally.
 @item @b{SEGGER JLINK}
 @* Link: @url{http://www.segger.com/jlink.html}
 @item @b{IAR J-Link}
-@* Link: @url{http://www.iar.com/website1/1.0.1.0/369/1/index.php}
+@* Link: @url{http://www.iar.com/en/products/hardware-debug-probes/iar-j-link/}
 @end itemize
 
 @section USB RLINK based
@@ -412,35 +428,65 @@ Raisonance has an adapter called @b{RLink}.  It exists in a stripped-down form o
 
 @itemize @bullet
 @item @b{Raisonance RLink}
-@* Link: @url{http://www.raisonance.com/products/RLink.php}
+@* Link: @url{http://www.mcu-raisonance.com/~rlink-debugger-programmer__microcontrollers__tool~tool__T018:4cn9ziz4bnx6.html}
 @item @b{STM32 Primer}
 @* Link: @url{http://www.stm32circle.com/resources/stm32primer.php}
 @item @b{STM32 Primer2}
 @* Link: @url{http://www.stm32circle.com/resources/stm32primer2.php}
 @end itemize
 
+@section USB ST-LINK based
+ST Micro has an adapter called @b{ST-LINK}.
+They only work with ST Micro chips, notably STM32 and STM8.
+
+@itemize @bullet
+@item @b{ST-LINK}
+@* This is available standalone and as part of some kits, eg. STM32VLDISCOVERY.
+@* Link: @url{http://www.st.com/internet/evalboard/product/219866.jsp}
+@item @b{ST-LINK/V2}
+@* This is available standalone and as part of some kits, eg. STM32F4DISCOVERY.
+@* Link: @url{http://www.st.com/internet/evalboard/product/251168.jsp}
+@end itemize
+
+For info the original ST-LINK enumerates using the mass storage usb class, however
+it's implementation is completely broken. The result is this causes issues under linux.
+The simplest solution is to get linux to ignore the ST-LINK using one of the following methods:
+@itemize @bullet
+@item modprobe -r usb-storage && modprobe usb-storage quirks=483:3744:i
+@item add "options usb-storage quirks=483:3744:i" to /etc/modprobe.conf
+@end itemize
+
 @section USB Other
 @itemize @bullet
 @item @b{USBprog}
-@* Link: @url{http://www.embedded-projects.net/usbprog} - which uses an Atmel MEGA32 and a UBN9604
+@* Link: @url{http://shop.embedded-projects.net/} - which uses an Atmel MEGA32 and a UBN9604
 
 @item @b{USB - Presto}
 @* Link: @url{http://tools.asix.net/prg_presto.htm}
 
 @item @b{Versaloon-Link}
-@* Link: @url{http://www.simonqian.com/en/Versaloon}
+@* Link: @url{http://www.versaloon.com}
 
 @item @b{ARM-JTAG-EW}
 @* Link: @url{http://www.olimex.com/dev/arm-jtag-ew.html}
 
 @item @b{Buspirate}
 @* Link: @url{http://dangerousprototypes.com/bus-pirate-manual/}
+
+@item @b{opendous}
+@* Link: @url{http://code.google.com/p/opendous-jtag/}
+
+@item @b{estick}
+@* Link: @url{http://code.google.com/p/estick-jtag/}
+
+@item @b{Keil ULINK v1}
+@* Link: @url{http://www.keil.com/ulink1/}
 @end itemize
 
 @section IBM PC Parallel Printer Port Based
 
 The two well known ``JTAG Parallel Ports'' cables are the Xilnx DLC5
-and the MacGraigor Wiggler. There are many clones and variations of
+and the Macraigor Wiggler. There are many clones and variations of
 these on the market.
 
 Note that parallel ports are becoming much less common, so if you
@@ -463,8 +509,7 @@ produced, PDF schematics are easily found and it is easy to make.
 @* Link: @url{http://www.gateworks.com/products/avila_accessories/gw16042.php}
 
 @item @b{Wiggler2}
-@*@uref{http://www.ccac.rwth-aachen.de/@/~michaels/@/index.php/hardware/@/armjtag,
-Improved parallel-port wiggler-style JTAG adapter}
+@* Link: @url{http://www.ccac.rwth-aachen.de/~michaels/index.php/hardware/armjtag}
 
 @item @b{Wiggler_ntrst_inverted}
 @* Yet another variation - See the source code, src/jtag/parport.c
@@ -487,8 +532,7 @@ Improved parallel-port wiggler-style JTAG adapter}
 
 @item @b{flashlink}
 @* From ST Microsystems;
-@uref{http://www.st.com/stonline/@/products/literature/um/7889.pdf,
-FlashLINK JTAG programing cable for PSD and uPSD}
+@* Link: @url{http://www.st.com/internet/com/TECHNICAL_RESOURCES/TECHNICAL_LITERATURE/DATA_BRIEF/DM00039500.pdf}
 
 @end itemize
 
@@ -526,14 +570,14 @@ OpenOCD mailing list.
 @item @b{Jim vs. Tcl}
 @* Jim-Tcl is a stripped down version of the well known Tcl language,
 which can be found here: @url{http://www.tcl.tk}. Jim-Tcl has far
-fewer features. Jim-Tcl is a single .C file and a single .H file and
+fewer features. Jim-Tcl is several dozens of .C files and .H files and
 implements the basic Tcl command set. In contrast: Tcl 8.6 is a
-4.2 MB .zip file containing 1540 files. 
+4.2 MB .zip file containing 1540 files.
 
 @item @b{Missing Features}
 @* Our practice has been: Add/clone the real Tcl feature if/when
 needed. We welcome Jim-Tcl improvements, not bloat. Also there
-are a large number of optional Jim-Tcl features that are not 
+are a large number of optional Jim-Tcl features that are not
 enabled in OpenOCD.
 
 @item @b{Scripts}
@@ -606,7 +650,7 @@ The first found file with a matching file name will be used.
 
 @quotation Note
 Don't try to use configuration script names or paths which
-include the "#" character.  That character begins Tcl comments.  
+include the "#" character.  That character begins Tcl comments.
 @end quotation
 
 @section Simple setup, no customization
@@ -632,7 +676,7 @@ If all goes well you'll see output something like
 @example
 Open On-Chip Debugger 0.4.0 (2010-01-14-15:06)
 For bug reports, read
-        http://openocd.berlios.de/doc/doxygen/bugs.html
+        http://openocd.sourceforge.net/doc/doxygen/bugs.html
 Info : JTAG tap: lm3s.cpu tap/device found: 0x3ba00477
        (mfg: 0x23b, part: 0xba00, ver: 0x3)
 @end example
@@ -675,8 +719,6 @@ setting from within a telnet or gdb session using @command{debug_level
 
 You can redirect all output from the daemon to a file using the
 @option{-l <logfile>} switch.
-
-For details on the @option{-p} option. @xref{Connecting to GDB}.
 
 Note! OpenOCD will launch the GDB & telnet server even if it can not
 establish a connection with the target. In general, it is possible for
@@ -1203,17 +1245,30 @@ These are for debug adapters.
 Files that configure JTAG adapters go here.
 @example
 $ ls interface
-arm-jtag-ew.cfg          hitex_str9-comstick.cfg  oocdlink.cfg
-arm-usb-ocd.cfg          icebear.cfg              openocd-usb.cfg
-at91rm9200.cfg           jlink.cfg                parport.cfg
-axm0432.cfg              jtagkey2.cfg             parport_dlc5.cfg
-calao-usb-a9260-c01.cfg  jtagkey.cfg              rlink.cfg
-calao-usb-a9260-c02.cfg  jtagkey-tiny.cfg         sheevaplug.cfg
-calao-usb-a9260.cfg      luminary.cfg             signalyzer.cfg
-chameleon.cfg            luminary-icdi.cfg        stm32-stick.cfg
-cortino.cfg              luminary-lm3s811.cfg     turtelizer2.cfg
-dummy.cfg                olimex-arm-usb-ocd.cfg   usbprog.cfg
-flyswatter.cfg           olimex-jtag-tiny.cfg     vsllink.cfg
+altera-usb-blaster.cfg    hilscher_nxhx50_etm.cfg    openrd.cfg
+arm-jtag-ew.cfg           hilscher_nxhx50_re.cfg     osbdm.cfg
+arm-usb-ocd.cfg           hitex_str9-comstick.cfg    parport.cfg
+at91rm9200.cfg            icebear.cfg                parport_dlc5.cfg
+axm0432.cfg               jlink.cfg                  redbee-econotag.cfg
+busblaster.cfg            jtagkey2.cfg               redbee-usb.cfg
+buspirate.cfg             jtagkey2p.cfg              rlink.cfg
+calao-usb-a9260-c01.cfg   jtagkey.cfg                sheevaplug.cfg
+calao-usb-a9260-c02.cfg   jtagkey-tiny.cfg           signalyzer.cfg
+calao-usb-a9260.cfg       kt-link.cfg                signalyzer-h2.cfg
+chameleon.cfg             lisa-l.cfg                 signalyzer-h4.cfg
+cortino.cfg               luminary.cfg               signalyzer-lite.cfg
+digilent-hs1.cfg          luminary-icdi.cfg          stlink-v1.cfg
+dlp-usb1232h.cfg          luminary-lm3s811.cfg       stlink-v2.cfg
+dummy.cfg                 minimodule.cfg             stm32-stick.cfg
+estick.cfg                neodb.cfg                  turtelizer2.cfg
+flashlink.cfg             ngxtech.cfg                ulink.cfg
+flossjtag.cfg             olimex-arm-usb-ocd.cfg     usb-jtag.cfg
+flossjtag-noeeprom.cfg    olimex-arm-usb-ocd-h.cfg   usbprog.cfg
+flyswatter2.cfg           olimex-arm-usb-tiny-h.cfg  vpaclink.cfg
+flyswatter.cfg            olimex-jtag-tiny.cfg       vsllink.cfg
+hilscher_nxhx10_etm.cfg   oocdlink.cfg               xds100v2.cfg
+hilscher_nxhx500_etm.cfg  opendous.cfg
+hilscher_nxhx500_re.cfg   openocd-usb.cfg
 $
 @end example
 @item @file{board} ...
@@ -1229,32 +1284,72 @@ board file. Boards may also contain multiple targets:  two CPUs; or
 a CPU and an FPGA.
 @example
 $ ls board
-arm_evaluator7t.cfg               keil_mcb1700.cfg
-at91rm9200-dk.cfg                 keil_mcb2140.cfg
-at91sam9g20-ek.cfg                linksys_nslu2.cfg
-atmel_at91sam7s-ek.cfg            logicpd_imx27.cfg
-atmel_at91sam9260-ek.cfg          mini2440.cfg
-atmel_sam3u_ek.cfg                olimex_LPC2378STK.cfg
-crossbow_tech_imote2.cfg          olimex_lpc_h2148.cfg
-csb337.cfg                        olimex_sam7_ex256.cfg
-csb732.cfg                        olimex_sam9_l9260.cfg
-digi_connectcore_wi-9c.cfg        olimex_stm32_h103.cfg
-dm355evm.cfg                      omap2420_h4.cfg
-dm365evm.cfg                      osk5912.cfg
-dm6446evm.cfg                     pic-p32mx.cfg
-eir.cfg                           propox_mmnet1001.cfg
-ek-lm3s1968.cfg                   pxa255_sst.cfg
-ek-lm3s3748.cfg                   sheevaplug.cfg
-ek-lm3s811.cfg                    stm3210e_eval.cfg
-ek-lm3s9b9x.cfg                   stm32f10x_128k_eval.cfg
-hammer.cfg                        str910-eval.cfg
-hitex_lpc2929.cfg                 telo.cfg
-hitex_stm32-performancestick.cfg  ti_beagleboard.cfg
-hitex_str9-comstick.cfg           topas910.cfg
-iar_str912_sk.cfg                 topasa900.cfg
-imx27ads.cfg                      unknown_at91sam9260.cfg
-imx27lnst.cfg                     x300t.cfg
-imx31pdk.cfg                      zy1000.cfg
+actux3.cfg                        logicpd_imx27.cfg
+am3517evm.cfg                     lubbock.cfg
+arm_evaluator7t.cfg               mcb1700.cfg
+at91cap7a-stk-sdram.cfg           microchip_explorer16.cfg
+at91eb40a.cfg                     mini2440.cfg
+at91rm9200-dk.cfg                 mini6410.cfg
+at91rm9200-ek.cfg                 olimex_LPC2378STK.cfg
+at91sam9261-ek.cfg                olimex_lpc_h2148.cfg
+at91sam9263-ek.cfg                olimex_sam7_ex256.cfg
+at91sam9g20-ek.cfg                olimex_sam9_l9260.cfg
+atmel_at91sam7s-ek.cfg            olimex_stm32_h103.cfg
+atmel_at91sam9260-ek.cfg          olimex_stm32_h107.cfg
+atmel_at91sam9rl-ek.cfg           olimex_stm32_p107.cfg
+atmel_sam3n_ek.cfg                omap2420_h4.cfg
+atmel_sam3s_ek.cfg                open-bldc.cfg
+atmel_sam3u_ek.cfg                openrd.cfg
+atmel_sam3x_ek.cfg                osk5912.cfg
+atmel_sam4s_ek.cfg                phytec_lpc3250.cfg
+balloon3-cpu.cfg                  pic-p32mx.cfg
+colibri.cfg                       propox_mmnet1001.cfg
+crossbow_tech_imote2.cfg          pxa255_sst.cfg
+csb337.cfg                        redbee.cfg
+csb732.cfg                        rsc-w910.cfg
+da850evm.cfg                      sheevaplug.cfg
+digi_connectcore_wi-9c.cfg        smdk6410.cfg
+diolan_lpc4350-db1.cfg            spear300evb.cfg
+dm355evm.cfg                      spear300evb_mod.cfg
+dm365evm.cfg                      spear310evb20.cfg
+dm6446evm.cfg                     spear310evb20_mod.cfg
+efikamx.cfg                       spear320cpu.cfg
+eir.cfg                           spear320cpu_mod.cfg
+ek-lm3s1968.cfg                   steval_pcc010.cfg
+ek-lm3s3748.cfg                   stm320518_eval_stlink.cfg
+ek-lm3s6965.cfg                   stm32100b_eval.cfg
+ek-lm3s811.cfg                    stm3210b_eval.cfg
+ek-lm3s811-revb.cfg               stm3210c_eval.cfg
+ek-lm3s9b9x.cfg                   stm3210e_eval.cfg
+ek-lm4f232.cfg                    stm3220g_eval.cfg
+embedded-artists_lpc2478-32.cfg   stm3220g_eval_stlink.cfg
+ethernut3.cfg                     stm3241g_eval.cfg
+glyn_tonga2.cfg                   stm3241g_eval_stlink.cfg
+hammer.cfg                        stm32f0discovery.cfg
+hilscher_nxdb500sys.cfg           stm32f4discovery.cfg
+hilscher_nxeb500hmi.cfg           stm32ldiscovery.cfg
+hilscher_nxhx10.cfg               stm32vldiscovery.cfg
+hilscher_nxhx500.cfg              str910-eval.cfg
+hilscher_nxhx50.cfg               telo.cfg
+hilscher_nxsb100.cfg              ti_beagleboard.cfg
+hitex_lpc2929.cfg                 ti_beagleboard_xm.cfg
+hitex_stm32-performancestick.cfg  ti_beaglebone.cfg
+hitex_str9-comstick.cfg           ti_blaze.cfg
+iar_lpc1768.cfg                   ti_pandaboard.cfg
+iar_str912_sk.cfg                 ti_pandaboard_es.cfg
+icnova_imx53_sodimm.cfg           topas910.cfg
+icnova_sam9g45_sodimm.cfg         topasa900.cfg
+imx27ads.cfg                      twr-k60n512.cfg
+imx27lnst.cfg                     tx25_stk5.cfg
+imx28evk.cfg                      tx27_stk5.cfg
+imx31pdk.cfg                      unknown_at91sam9260.cfg
+imx35pdk.cfg                      uptech_2410.cfg
+imx53loco.cfg                     verdex.cfg
+keil_mcb1700.cfg                  voipac.cfg
+keil_mcb2140.cfg                  voltcraft_dso-3062c.cfg
+kwikstik.cfg                      x300t.cfg
+linksys_nslu2.cfg                 zy1000.cfg
+lisa-l.cfg
 $
 @end example
 @item @file{target} ...
@@ -1266,32 +1361,71 @@ When a chip has multiple TAPs (maybe it has both ARM and DSP cores),
 the target config file defines all of them.
 @example
 $ ls target
-aduc702x.cfg     imx27.cfg     pxa255.cfg
-ar71xx.cfg       imx31.cfg     pxa270.cfg
-at91eb40a.cfg    imx35.cfg     readme.txt
-at91r40008.cfg   is5114.cfg    sam7se512.cfg
-at91rm9200.cfg   ixp42x.cfg    sam7x256.cfg
-at91sam3u1c.cfg  lm3s1968.cfg  samsung_s3c2410.cfg
-at91sam3u1e.cfg  lm3s3748.cfg  samsung_s3c2440.cfg
-at91sam3u2c.cfg  lm3s6965.cfg  samsung_s3c2450.cfg
-at91sam3u2e.cfg  lm3s811.cfg   samsung_s3c4510.cfg
-at91sam3u4c.cfg  lm3s9b9x.cfg  samsung_s3c6410.cfg
-at91sam3u4e.cfg  lpc1768.cfg   sharp_lh79532.cfg
-at91sam3uXX.cfg  lpc2103.cfg   smdk6410.cfg
-at91sam7sx.cfg   lpc2124.cfg   smp8634.cfg
-at91sam9260.cfg  lpc2129.cfg   stm32.cfg
-c100.cfg         lpc2148.cfg   str710.cfg
-c100config.tcl   lpc2294.cfg   str730.cfg
-c100helper.tcl   lpc2378.cfg   str750.cfg
-c100regs.tcl     lpc2478.cfg   str912.cfg
-cs351x.cfg       lpc2900.cfg   telo.cfg
-davinci.cfg      mega128.cfg   ti_dm355.cfg
-dragonite.cfg    netx500.cfg   ti_dm365.cfg
-epc9301.cfg      omap2420.cfg  ti_dm6446.cfg
-feroceon.cfg     omap3530.cfg  tmpa900.cfg
-icepick.cfg      omap5912.cfg  tmpa910.cfg
-imx21.cfg        pic32mx.cfg   xba_revA3.cfg
-$
+$duc702x.cfg                       ixp42x.cfg
+am335x.cfg                         k40.cfg
+amdm37x.cfg                        k60.cfg
+ar71xx.cfg                         lpc1768.cfg
+at32ap7000.cfg                     lpc2103.cfg
+at91r40008.cfg                     lpc2124.cfg
+at91rm9200.cfg                     lpc2129.cfg
+at91sam3ax_4x.cfg                  lpc2148.cfg
+at91sam3ax_8x.cfg                  lpc2294.cfg
+at91sam3ax_xx.cfg                  lpc2378.cfg
+at91sam3nXX.cfg                    lpc2460.cfg
+at91sam3sXX.cfg                    lpc2478.cfg
+at91sam3u1c.cfg                    lpc2900.cfg
+at91sam3u1e.cfg                    lpc2xxx.cfg
+at91sam3u2c.cfg                    lpc3131.cfg
+at91sam3u2e.cfg                    lpc3250.cfg
+at91sam3u4c.cfg                    lpc4350.cfg
+at91sam3u4e.cfg                    mc13224v.cfg
+at91sam3uxx.cfg                    nuc910.cfg
+at91sam3XXX.cfg                    omap2420.cfg
+at91sam4sXX.cfg                    omap3530.cfg
+at91sam4XXX.cfg                    omap4430.cfg
+at91sam7se512.cfg                  omap4460.cfg
+at91sam7sx.cfg                     omap5912.cfg
+at91sam7x256.cfg                   omapl138.cfg
+at91sam7x512.cfg                   pic32mx.cfg
+at91sam9260.cfg                    pxa255.cfg
+at91sam9260_ext_RAM_ext_flash.cfg  pxa270.cfg
+at91sam9261.cfg                    pxa3xx.cfg
+at91sam9263.cfg                    readme.txt
+at91sam9.cfg                       samsung_s3c2410.cfg
+at91sam9g10.cfg                    samsung_s3c2440.cfg
+at91sam9g20.cfg                    samsung_s3c2450.cfg
+at91sam9g45.cfg                    samsung_s3c4510.cfg
+at91sam9rl.cfg                     samsung_s3c6410.cfg
+atmega128.cfg                      sharp_lh79532.cfg
+avr32.cfg                          smp8634.cfg
+c100.cfg                           spear3xx.cfg
+c100config.tcl                     stellaris.cfg
+c100helper.tcl                     stm32.cfg
+c100regs.tcl                       stm32f0x_stlink.cfg
+cs351x.cfg                         stm32f1x.cfg
+davinci.cfg                        stm32f1x_stlink.cfg
+dragonite.cfg                      stm32f2x.cfg
+dsp56321.cfg                       stm32f2x_stlink.cfg
+dsp568013.cfg                      stm32f2xxx.cfg
+dsp568037.cfg                      stm32f4x.cfg
+epc9301.cfg                        stm32f4x_stlink.cfg
+faux.cfg                           stm32l.cfg
+feroceon.cfg                       stm32lx_stlink.cfg
+fm3.cfg                            stm32_stlink.cfg
+hilscher_netx10.cfg                stm32xl.cfg
+hilscher_netx500.cfg               str710.cfg
+hilscher_netx50.cfg                str730.cfg
+icepick.cfg                        str750.cfg
+imx21.cfg                          str912.cfg
+imx25.cfg                          swj-dp.tcl
+imx27.cfg                          test_reset_syntax_error.cfg
+imx28.cfg                          test_syntax_error.cfg
+imx31.cfg                          ti_dm355.cfg
+imx35.cfg                          ti_dm365.cfg
+imx51.cfg                          ti_dm6446.cfg
+imx53.cfg                          tmpa900.cfg
+imx.cfg                            tmpa910.cfg
+is5114.cfg                         u8500.cfg
 @end example
 @item @emph{more} ... browse for other library files which may be useful.
 For example, there are various generic and CPU-specific utilities.
@@ -1318,7 +1452,7 @@ have only been used by the developer who created it.
 
 A separate chapter gives information about how to set these up.
 @xref{Debug Adapter Configuration}.
-Read the OpenOCD source code (and Developer's GUide)
+Read the OpenOCD source code (and Developer's Guide)
 if you have a new kind of hardware interface
 and need to provide a driver for it.
 
@@ -1528,6 +1662,47 @@ also supports it.  Otherwise use @command{adapter_khz}.
 Set the slow rate at the beginning of the reset sequence,
 and the faster rate as soon as the clocks are at full speed.
 
+@anchor{The init_board procedure}
+@subsection The init_board procedure
+@cindex init_board procedure
+
+The concept of @code{init_board} procedure is very similar to @code{init_targets} (@xref{The init_targets procedure}.)
+- it's a replacement of ``linear'' configuration scripts. This procedure is meant to be executed when OpenOCD enters run
+stage (@xref{Entering the Run Stage},) after @code{init_targets}. The idea to have spearate @code{init_targets} and
+@code{init_board} procedures is to allow the first one to configure everything target specific (internal flash,
+internal RAM, etc.) and the second one to configure everything board specific (reset signals, chip frequency,
+reset-init event handler, external memory, etc.). Additionally ``linear'' board config file will most likely fail when
+target config file uses @code{init_targets} scheme (``linear'' script is executed before @code{init} and
+@code{init_targets} - after), so separating these two configuration stages is very convenient, as the easiest way to
+overcome this problem is to convert board config file to use @code{init_board} procedure. Board config scripts don't
+need to override @code{init_targets} defined in target config files when they only need to to add some specifics.
+
+Just as @code{init_targets}, the @code{init_board} procedure can be overriden by ``next level'' script (which sources
+the original), allowing greater code reuse.
+
+@example
+### board_file.cfg ###
+
+# source target file that does most of the config in init_targets
+source [find target/target.cfg]
+
+proc enable_fast_clock @{@} @{
+    # enables fast on-board clock source
+    # configures the chip to use it
+@}
+
+# initialize only board specifics - reset, clock, adapter frequency
+proc init_board @{@} @{
+    reset_config trst_and_srst trst_pulls_srst
+
+    $_TARGETNAME configure -event reset-init @{
+        adapter_khz 1
+        enable_fast_clock
+        adapter_khz 10000
+    @}
+@}
+@end example
+
 @section Target Config Files
 @cindex config file, target
 @cindex target config file
@@ -1679,20 +1854,20 @@ Again using the at91sam7 as an example, this can look like:
 $_TARGETNAME configure -work-area-phys 0x00200000 \
              -work-area-size 0x4000 -work-area-backup 0
 @end example
-@pxref{Define CPU targets working in SMP}
+
 @anchor{Define CPU targets working in SMP}
 @subsection Define CPU targets working in SMP
 @cindex SMP
 After setting targets, you can define a list of targets working in SMP.
 
-@example 
+@example
 set _TARGETNAME_1 $_CHIPNAME.cpu1
 set _TARGETNAME_2 $_CHIPNAME.cpu2
 target create $_TARGETNAME_1 cortex_a8 -chain-position $_CHIPNAME.dap \
--coreid 0 -dbgbase $_DAP_DBG1 
+-coreid 0 -dbgbase $_DAP_DBG1
 target create $_TARGETNAME_2 cortex_a8 -chain-position $_CHIPNAME.dap \
--coreid 1 -dbgbase $_DAP_DBG2 
-#define 2 targets working in smp. 
+-coreid 1 -dbgbase $_DAP_DBG2
+#define 2 targets working in smp.
 target smp $_CHIPNAME.cpu2 $_CHIPNAME.cpu1
 @end example
 In the above example on cortex_a8, 2 cpus are working in SMP.
@@ -1702,7 +1877,7 @@ In SMP only one GDB instance is created and :
 @item halt command triggers the halt of all targets in the list.
 @item resume command triggers the write context and the restart of all targets in the list.
 @item following a breakpoint: the target stopped by the breakpoint is displayed to the GDB session.
-@item dedicated GDB serial protocol packets are implemented for switching/retrieving the target 
+@item dedicated GDB serial protocol packets are implemented for switching/retrieving the target
 displayed by the GDB session @pxref{Using openocd SMP with GDB}.
 @end itemize
 
@@ -1719,15 +1894,15 @@ following example.
 
 @example
 >cortex_a8 smp_gdb
-gdb coreid  0 -> -1  
+gdb coreid  0 -> -1
 #0 : coreid 0 is displayed to GDB ,
 #-> -1 : next resume triggers a real resume
 > cortex_a8 smp_gdb 1
-gdb coreid  0 -> 1   
+gdb coreid  0 -> 1
 #0 :coreid 0 is displayed to GDB ,
-#->1  : next resume displays coreid 1 to GDB 
+#->1  : next resume displays coreid 1 to GDB
 > resume
-> cortex_a8 smp_gdb  
+> cortex_a8 smp_gdb
 gdb coreid  1 -> 1
 #1 :coreid 1 is displayed to GDB ,
 #->1 : next resume displays coreid 1 to GDB
@@ -1788,6 +1963,47 @@ In particular, if you see intermittent failures when
 OpenOCD verifies the scan chain after reset,
 look at how you are setting up JTAG clocking.
 @end quotation
+
+@anchor{The init_targets procedure}
+@subsection The init_targets procedure
+@cindex init_targets procedure
+
+Target config files can either be ``linear'' (script executed line-by-line when parsed in configuration stage,
+@xref{Configuration Stage},) or they can contain a special procedure called @code{init_targets}, which will be executed
+when entering run stage (after parsing all config files or after @code{init} command, @xref{Entering the Run Stage}.)
+Such procedure can be overriden by ``next level'' script (which sources the original). This concept faciliates code
+reuse when basic target config files provide generic configuration procedures and @code{init_targets} procedure, which
+can then be sourced and enchanced or changed in a ``more specific'' target config file. This is not possible with
+``linear'' config scripts, because sourcing them executes every initialization commands they provide.
+
+@example
+### generic_file.cfg ###
+
+proc setup_my_chip @{chip_name flash_size ram_size@} @{
+    # basic initialization procedure ...
+@}
+
+proc init_targets @{@} @{
+    # initializes generic chip with 4kB of flash and 1kB of RAM
+    setup_my_chip MY_GENERIC_CHIP 4096 1024
+@}
+
+### specific_file.cfg ###
+
+source [find target/generic_file.cfg]
+
+proc init_targets @{@} @{
+    # initializes specific chip with 128kB of flash and 64kB of RAM
+    setup_my_chip MY_CHIP_WITH_128K_FLASH_64KB_RAM 131072 65536
+@}
+@end example
+
+The easiest way to convert ``linear'' config files to @code{init_targets} version is to enclose every line of ``code''
+(i.e. not @code{source} commands, procedures, etc.) in this procedure.
+
+For an example of this scheme see LPC2000 target config files.
+
+The @code{init_boards} procedure is a similar concept concerning board config files (@xref{The init_board procedure}.)
 
 @subsection ARM Core Specific Hacks
 
@@ -1901,6 +2117,7 @@ may access or activate TAPs.
 After it leaves this stage, configuration commands may no
 longer be issued.
 
+@anchor{Entering the Run Stage}
 @section Entering the Run Stage
 
 The first thing OpenOCD does after leaving the configuration
@@ -1981,7 +2198,7 @@ communicate via pipes(stdin/out or named pipes). The name
 "gdb_port" stuck because it covers probably more than 90% of
 the normal use cases.
 
-No arguments reports GDB port. "pipe" means listen to stdin 
+No arguments reports GDB port. "pipe" means listen to stdin
 output to stdout, an integer is base port number, "disable"
 disables the gdb server.
 
@@ -1991,11 +2208,11 @@ output to a file so as not to flood the stdin/out pipes.
 The -p/--pipe option is deprecated and a warning is printed
 as it is equivalent to passing in -c "gdb_port pipe; log_output openocd.log".
 
-Any other string is interpreted as named pipe to listen to. 
+Any other string is interpreted as named pipe to listen to.
 Output pipe is the same name as input pipe, but with 'o' appended,
 e.g. /var/gdb, /var/gdbo.
-				
-The GDB port for the first target will be the base port, the 
+
+The GDB port for the first target will be the base port, the
 second target will listen on gdb_port + 1, and so on.
 When not specified during the configuration stage,
 the port @var{number} defaults to 3333.
@@ -2323,6 +2540,43 @@ ft2232_vid_pid 0x0403 0xbdc8
 @end example
 @end deffn
 
+@deffn {Interface Driver} {remote_bitbang}
+Drive JTAG from a remote process. This sets up a UNIX or TCP socket connection
+with a remote process and sends ASCII encoded bitbang requests to that process
+instead of directly driving JTAG.
+
+The remote_bitbang driver is useful for debugging software running on
+processors which are being simulated.
+
+@deffn {Config Command} {remote_bitbang_port} number
+Specifies the TCP port of the remote process to connect to or 0 to use UNIX
+sockets instead of TCP.
+@end deffn
+
+@deffn {Config Command} {remote_bitbang_host} hostname
+Specifies the hostname of the remote process to connect to using TCP, or the
+name of the UNIX socket to use if remote_bitbang_port is 0.
+@end deffn
+
+For example, to connect remotely via TCP to the host foobar you might have
+something like:
+
+@example
+interface remote_bitbang
+remote_bitbang_port 3335
+remote_bitbang_host foobar
+@end example
+
+To connect to another process running locally via UNIX sockets with socket
+named mysocket:
+
+@example
+interface remote_bitbang
+remote_bitbang_port 0
+remote_bitbang_host mysocket
+@end example
+@end deffn
+
 @deffn {Interface Driver} {usb_blaster}
 USB JTAG/USB-Blaster compatibles over one of the userspace libraries
 for FTDI chips.  These interfaces have several commands, used to
@@ -2376,33 +2630,56 @@ This is a write-once setting.
 @end deffn
 
 @deffn {Interface Driver} {jlink}
-Segger jlink USB adapter
-@c command:	jlink caps
-@c     dumps jlink capabilities
-@c command:	jlink config
-@c     access J-Link configurationif no argument this will dump the config
-@c command:	jlink config kickstart [val]
-@c     set Kickstart power on JTAG-pin 19.
-@c command:	jlink config mac_address [ff:ff:ff:ff:ff:ff]
-@c     set the MAC Address
-@c command:	jlink config ip [A.B.C.D[/E] [F.G.H.I]]
-@c     set the ip address of the J-Link Pro, "
-@c     where A.B.C.D is the ip,
-@c     E the bit of the subnet mask
-@c     F.G.H.I the subnet mask
-@c command:	jlink config reset
-@c     reset the current config
-@c command:	jlink config save
-@c     save the current config
-@c command:	jlink config usb_address [0x00 to 0x03 or 0xff]
-@c     set the USB-Address,
-@c     This will change the product id
-@c command:	jlink info
-@c     dumps status
-@c command:	jlink hw_jtag (2|3)
-@c     sets version 2 or 3
-@c command:	 jlink pid
-@c     set the pid of the interface we want to use
+Segger J-Link family of USB adapters. It currently supports only the JTAG transport.
+
+@quotation Compatibility Note
+Segger released many firmware versions for the many harware versions they
+produced. OpenOCD was extensively tested and intended to run on all of them,
+but some combinations were reported as incompatible. As a general
+recommendation, it is advisable to use the latest firmware version
+available for each hardware version. However the current V8 is a moving
+target, and Segger firmware versions released after the OpenOCD was
+released may not be compatible. In such cases it is recommended to
+revert to the last known functional version. For 0.5.0, this is from
+"Feb  8 2012 14:30:39", packed with 4.42c. For 0.6.0, the last known
+version is from "May  3 2012 18:36:22", packed with 4.46f.
+@end quotation
+
+@deffn {Command} {jlink caps}
+Display the device firmware capabilities.
+@end deffn
+@deffn {Command} {jlink info}
+Display various device information, like hardware version, firmware version, current bus status.
+@end deffn
+@deffn {Command} {jlink hw_jtag} [@option{2}|@option{3}]
+Set the JTAG protocol version to be used. Without argument, show the actual JTAG protocol version.
+@end deffn
+@deffn {Command} {jlink config}
+Display the J-Link configuration.
+@end deffn
+@deffn {Command} {jlink config kickstart} [val]
+Set the Kickstart power on JTAG-pin 19. Without argument, show the Kickstart configuration.
+@end deffn
+@deffn {Command} {jlink config mac_address} [@option{ff:ff:ff:ff:ff:ff}]
+Set the MAC address of the J-Link Pro. Without argument, show the MAC address.
+@end deffn
+@deffn {Command} {jlink config ip} [@option{A.B.C.D}(@option{/E}|@option{F.G.H.I})]
+Set the IP configuration of the J-Link Pro, where A.B.C.D is the IP address,
+     E the bit of the subnet mask and
+     F.G.H.I the subnet mask. Without arguments, show the IP configuration.
+@end deffn
+@deffn {Command} {jlink config usb_address} [@option{0x00} to @option{0x03} or @option{0xff}]
+Set the USB address; this will also change the product id. Without argument, show the USB address.
+@end deffn
+@deffn {Command} {jlink config reset}
+Reset the current configuration.
+@end deffn
+@deffn {Command} {jlink config save}
+Save the current configuration to the internal persistent storage.
+@end deffn
+@deffn {Config} {jlink pid} val
+Set the USB PID of the interface. As a configuration command, it can be used only before 'init'.
+@end deffn
 @end deffn
 
 @deffn {Interface Driver} {parport}
@@ -2525,6 +2802,38 @@ vsllink is part of Versaloon which is a versatile USB programmer.
 This defines quite a few driver-specific commands,
 which are not currently documented here.
 @end quotation
+@end deffn
+
+@deffn {Interface Driver} {stlink}
+ST Micro ST-LINK adapter.
+
+@deffn {Config Command} {stlink_device_desc} description
+Currently Not Supported.
+@end deffn
+
+@deffn {Config Command} {stlink_serial} serial
+Currently Not Supported.
+@end deffn
+
+@deffn {Config Command} {stlink_layout} (@option{sg}|@option{usb})
+Specifies the stlink layout to use.
+@end deffn
+
+@deffn {Config Command} {stlink_vid_pid} vid pid
+The vendor ID and product ID of the STLINK device.
+@end deffn
+
+@deffn {Config Command} {stlink_api} api_level
+Manually sets the stlink api used, valid options are 1 or 2.
+@end deffn
+@end deffn
+
+@deffn {Interface Driver} {opendous}
+opendous-jtag is a freely programmable USB adapter.
+@end deffn
+
+@deffn {Interface Driver} {ulink}
+This is the Keil ULINK v1 JTAG debugger.
 @end deffn
 
 @deffn {Interface Driver} {ZY1000}
@@ -3224,7 +3533,7 @@ hardware to find these values.
 option.  When vendors put out multiple versions of a chip, or use the same
 JTAG-level ID for several largely-compatible chips, it may be more practical
 to ignore the version field than to update config files to handle all of
-the various chip IDs.
+the various chip IDs. The version field is defined as bit 28-31 of the IDCODE.
 @item @code{-ircapture} @var{NUMBER}
 @*The bit pattern loaded by the TAP into the JTAG shift register
 on entry to the @sc{ircapture} state, such as 0x01.
@@ -3604,14 +3913,7 @@ At this writing, the supported CPU types and variants are:
 (Support for this is preliminary and incomplete.)
 @item @code{cortex_a8} -- this is an ARMv7 core with an MMU
 @item @code{cortex_m3} -- this is an ARMv7 core, supporting only the
-compact Thumb2 instruction set.  It supports one variant:
-@itemize @minus
-@item @code{lm3s} ... Use this when debugging older Stellaris LM3S targets.
-This will cause OpenOCD to use a software reset rather than asserting
-SRST, to avoid a issue with clearing the debug registers.
-This is fixed in Fury Rev B, DustDevil Rev B, Tempest; these revisions will
-be detected and the normal reset behaviour used.
-@end itemize
+compact Thumb2 instruction set.
 @item @code{dragonite} -- resembles arm966e
 @item @code{dsp563xx} -- implements Freescale's 24-bit DSP.
 (Support for this is still incomplete.)
@@ -3770,6 +4072,10 @@ base @var{address} to be used when an MMU is active.
 @emph{Do not specify a value for this except on targets with an MMU.}
 The value should normally correspond to a static mapping for the
 @code{-work-area-phys} address, set up by the current operating system.
+
+@item @code{-rtos} @var{rtos_type} -- enable rtos support for target,
+@var{rtos_type} can be one of @option{auto}|@option{eCos}|@option{ThreadX}|
+@option{FreeRTOS}|@option{linux}|@option{ChibiOS}.
 
 @end itemize
 @end deffn
@@ -3962,14 +4268,12 @@ The following target events are defined:
 @* The target has resumed (i.e.: gdb said run)
 @item @b{early-halted}
 @* Occurs early in the halt process
-@ignore
-@item @b{examine-end}
-@* Currently not used (goal: when JTAG examine completes)
 @item @b{examine-start}
-@* Currently not used (goal: when JTAG examine starts)
-@end ignore
+@* Before target examine is called.
+@item @b{examine-end}
+@* After target examine is called with no errors.
 @item @b{gdb-attach}
-@* When GDB connects. This is before any communication with the target, so this 
+@* When GDB connects. This is before any communication with the target, so this
 can be used to set up the target so it is possible to probe flash. Probing flash
 is necessary during gdb connect if gdb load is to write the image to flash. Another
 use of the flash memory map is for GDB to automatically hardware/software breakpoints
@@ -3990,12 +4294,6 @@ depending on whether the breakpoint is in RAM or read only memory.
 @* Before the target steps, gdb is trying to start/resume the target
 @item @b{halted}
 @* The target has halted
-@ignore
-@item @b{old-gdb_program_config}
-@* DO NOT USE THIS: Used internally
-@item @b{old-pre_resume}
-@* DO NOT USE THIS: Used internally
-@end ignore
 @item @b{reset-assert-pre}
 @* Issued as part of @command{reset} processing
 after @command{reset_init} was triggered
@@ -4055,12 +4353,9 @@ when reset disables PLLs needed to use a fast clock.
 @* Before any target is resumed
 @item @b{resume-end}
 @* After all targets have resumed
-@item @b{resume-ok}
-@* Success
 @item @b{resumed}
 @* Target has resumed
 @end itemize
-
 
 @node Flash Commands
 @chapter Flash Commands
@@ -4218,7 +4513,7 @@ the specified length must stay within that bank.
 As a special case, when @var{length} is zero and @var{address} is
 the start of the bank, the whole flash is erased.
 If @option{unlock} is specified, then the flash is unprotected
-before erase starts. 
+before erase starts.
 @end deffn
 
 @deffn Command {flash fillw} address word length
@@ -4357,6 +4652,30 @@ flash bank $_FLASHNAME cfi 0x00000000 0x02000000 2 4 $_TARGETNAME
 @c "cfi part_id" disabled
 @end deffn
 
+@deffn {Flash Driver} lpcspifi
+@cindex NXP SPI Flash Interface
+@cindex SPIFI
+@cindex lpcspifi
+NXP's LPC43xx and LPC18xx families include a proprietary SPI
+Flash Interface (SPIFI) peripheral that can drive and provide
+memory mapped access to external SPI flash devices.
+
+The lpcspifi driver initializes this interface and provides
+program and erase functionality for these serial flash devices.
+Use of this driver @b{requires} a working area of at least 1kB
+to be configured on the target device; more than this will
+significantly reduce flash programming times.
+
+The setup command only requires the @var{base} parameter. All
+other parameters are ignored, and the flash size and layout
+are configured by the driver.
+
+@example
+flash bank $_FLASHNAME lpcspifi 0x14000000 0 0 0 $_TARGETNAME
+@end example
+
+@end deffn
+
 @deffn {Flash Driver} stmsmi
 @cindex STMicroelectronics Serial Memory Interface
 @cindex SMI
@@ -4399,6 +4718,7 @@ flash bank $_FLASHNAME aduc702x 0 0 0 0 $_TARGETNAME
 @end example
 @end deffn
 
+@anchor{at91sam3}
 @deffn {Flash Driver} at91sam3
 @cindex at91sam3
 All members of the AT91SAM3 microcontroller family from
@@ -4463,6 +4783,13 @@ This command shows/sets the slow clock frequency used in the
 @end deffn
 @end deffn
 
+@deffn {Flash Driver} at91sam4
+@cindex at91sam4
+All members of the AT91SAM4 microcontroller family from
+Atmel include internal flash and use ARM's Cortex-M4 core.
+This driver uses the same cmd names/syntax as @xref{at91sam3}.
+@end deffn
+
 @deffn {Flash Driver} at91sam7
 All members of the AT91SAM7 microcontroller family from Atmel include
 internal flash and use ARM7TDMI cores.  The driver automatically
@@ -4514,13 +4841,6 @@ the appropriate at91sam7 target.
 The AVR 8-bit microcontrollers from Atmel integrate flash memory.
 @emph{The current implementation is incomplete.}
 @comment - defines mass_erase ... pointless given flash_erase_address
-@end deffn
-
-@deffn {Flash Driver} ecosflash
-@emph{No idea what this is...}
-The @var{ecosflash} driver defines one mandatory parameter,
-the name of a modules of target code which is downloaded
-and executed.
 @end deffn
 
 @deffn {Flash Driver} lpc2000
@@ -4764,42 +5084,55 @@ applied to all of them.
 @end quotation
 @end deffn
 
-@deffn {Flash Driver} stm32x
-All members of the STM32 microcontroller family from ST Microelectronics
+@deffn {Flash Driver} stm32f1x
+All members of the STM32f1x microcontroller family from ST Microelectronics
 include internal flash and use ARM Cortex M3 cores.
 The driver automatically recognizes a number of these chips using
 the chip identification register, and autoconfigures itself.
 
 @example
-flash bank $_FLASHNAME stm32x 0 0 0 0 $_TARGETNAME
+flash bank $_FLASHNAME stm32f1x 0 0 0 0 $_TARGETNAME
 @end example
 
-Some stm32x-specific commands
-@footnote{Currently there is a @command{stm32x mass_erase} command.
+If you have a target with dual flash banks then define the second bank
+as per the following example.
+@example
+flash bank $_FLASHNAME stm32f1x 0x08080000 0 0 0 $_TARGETNAME
+@end example
+
+Some stm32f1x-specific commands
+@footnote{Currently there is a @command{stm32f1x mass_erase} command.
 That seems pointless since the same effect can be had using the
 standard @command{flash erase_address} command.}
 are defined:
 
-@deffn Command {stm32x lock} num
+@deffn Command {stm32f1x lock} num
 Locks the entire stm32 device.
 The @var{num} parameter is a value shown by @command{flash banks}.
 @end deffn
 
-@deffn Command {stm32x unlock} num
+@deffn Command {stm32f1x unlock} num
 Unlocks the entire stm32 device.
 The @var{num} parameter is a value shown by @command{flash banks}.
 @end deffn
 
-@deffn Command {stm32x options_read} num
+@deffn Command {stm32f1x options_read} num
 Read and display the stm32 option bytes written by
-the @command{stm32x options_write} command.
+the @command{stm32f1x options_write} command.
 The @var{num} parameter is a value shown by @command{flash banks}.
 @end deffn
 
-@deffn Command {stm32x options_write} num (@option{SWWDG}|@option{HWWDG}) (@option{RSTSTNDBY}|@option{NORSTSTNDBY}) (@option{RSTSTOP}|@option{NORSTSTOP})
+@deffn Command {stm32f1x options_write} num (@option{SWWDG}|@option{HWWDG}) (@option{RSTSTNDBY}|@option{NORSTSTNDBY}) (@option{RSTSTOP}|@option{NORSTSTOP})
 Writes the stm32 option byte with the specified values.
 The @var{num} parameter is a value shown by @command{flash banks}.
 @end deffn
+@end deffn
+
+@deffn {Flash Driver} stm32f2x
+All members of the STM32f2x microcontroller family from ST Microelectronics
+include internal flash and use ARM Cortex M3 cores.
+The driver automatically recognizes a number of these chips using
+the chip identification register, and autoconfigures itself.
 @end deffn
 
 @deffn {Flash Driver} str7x
@@ -4881,6 +5214,19 @@ the virtual banks are actually performed on the physical banks.
 flash bank $_FLASHNAME pic32mx 0x1fc00000 0 0 0 $_TARGETNAME
 flash bank vbank0 virtual 0xbfc00000 0 0 0 $_TARGETNAME $_FLASHNAME
 flash bank vbank1 virtual 0x9fc00000 0 0 0 $_TARGETNAME $_FLASHNAME
+@end example
+@end deffn
+
+@deffn {Flash Driver} fm3
+All members of the FM3 microcontroller family from Fujitsu
+include internal flash and use ARM Cortex M3 cores.
+The @var{fm3} driver uses the @var{target} parameter to select the
+correct bank config, it can currently be one of the following:
+@code{mb9bfxx1.cpu}, @code{mb9bfxx2.cpu}, @code{mb9bfxx3.cpu},
+@code{mb9bfxx4.cpu}, @code{mb9bfxx5.cpu} or @code{mb9bfxx6.cpu}.
+
+@example
+flash bank $_FLASHNAME fm3 0 0 0 0 $_TARGETNAME
 @end example
 @end deffn
 
@@ -5424,6 +5770,27 @@ in the MLC controller mode, but won't change SLC behavior.
 @end deffn
 @comment current lpc3180 code won't issue 5-byte address cycles
 
+@deffn {NAND Driver} mx3
+This driver handles the NAND controller in i.MX31. The mxc driver
+should work for this chip aswell.
+@end deffn
+
+@deffn {NAND Driver} mxc
+This driver handles the NAND controller found in Freescale i.MX
+chips. It has support for v1 (i.MX27 and i.MX31) and v2 (i.MX35).
+The driver takes 3 extra arguments, chip (@option{mx27},
+@option{mx31}, @option{mx35}), ecc (@option{noecc}, @option{hwecc})
+and optionally if bad block information should be swapped between
+main area and spare area (@option{biswap}), defaults to off.
+@example
+nand device mx35.nand mxc imx35.cpu mx35 hwecc biswap
+@end example
+@deffn Command {mxc biswap} bank_num [enable|disable]
+Turns on/off bad block information swaping from main area,
+without parameter query status.
+@end deffn
+@end deffn
+
 @deffn {NAND Driver} orion
 These controllers require an extra @command{nand device}
 parameter:  the address of the controller.
@@ -5859,7 +6226,7 @@ separately.
 
 @anchor{load_image}
 @deffn Command {load_image} filename address [[@option{bin}|@option{ihex}|@option{elf}|@option{s19}] @option{min_addr} @option{max_length}]
-Load image from file @var{filename} to target memory offset by @var{address} from its load address. 
+Load image from file @var{filename} to target memory offset by @var{address} from its load address.
 The file format may optionally be specified
 (@option{bin}, @option{ihex}, @option{elf}, or @option{s19}).
 In addition the following arguments may be specifed:
@@ -5869,7 +6236,7 @@ In addition the following arguments may be specifed:
 proc load_image_bin @{fname foffset address length @} @{
     # Load data from fname filename at foffset offset to
     # target at address. Load at most length bytes.
-    load_image $fname [expr $address - $foffset] bin $address $length      
+    load_image $fname [expr $address - $foffset] bin $address $length
 @}
 @end example
 @end deffn
@@ -7212,6 +7579,11 @@ A socket (TCP/IP) connection is typically started as follows:
 target remote localhost:3333
 @end example
 This would cause GDB to connect to the gdbserver on the local pc using port 3333.
+
+It is also possible to use the GDB extended remote protocol as follows:
+@example
+target extended-remote localhost:3333
+@end example
 @item
 A pipe connection is typically started as follows:
 @example
@@ -7351,7 +7723,7 @@ can be used.
 @cindex SMP
 For SMP support following GDB serial protocol packet have been defined :
 @itemize @bullet
-@item j - smp status request 
+@item j - smp status request
 @item J - smp set request
 @end itemize
 
@@ -7360,38 +7732,38 @@ OpenOCD implements :
 @item @option{jc} packet for reading core id displayed by
 GDB connection. Reply is  @option{XXXXXXXX} (8 hex digits giving core id) or
  @option{E01} for target not smp.
-@item  @option{JcXXXXXXXX} (8 hex digits) packet for setting core id displayed at next GDB continue 
-(core id -1 is reserved for returning to normal resume mode). Reply  @option{E01} 
+@item  @option{JcXXXXXXXX} (8 hex digits) packet for setting core id displayed at next GDB continue
+(core id -1 is reserved for returning to normal resume mode). Reply  @option{E01}
 for target not smp or @option{OK} on success.
 @end itemize
 
 Handling of this packet within GDB can be done :
 @itemize @bullet
-@item by the creation of an internal variable (i.e @option{_core}) by mean 
+@item by the creation of an internal variable (i.e @option{_core}) by mean
 of function allocate_computed_value allowing following GDB command.
 @example
-set $_core 1 
+set $_core 1
 #Jc01 packet is sent
-print $_core 
-#jc packet is sent and result is affected in $ 
+print $_core
+#jc packet is sent and result is affected in $
 @end example
 
 @item by the usage of GDB maintenance command as described in following example (2
 cpus in SMP with core id 0 and 1  @pxref{Define CPU targets working in SMP}).
 
 @example
-# toggle0 : force display of coreid 0 
-define toggle0 
-maint packet Jc0 
-continue 
-main packet Jc-1 
-end 
-# toggle1 : force display of coreid 1 
-define toggle1 
-maint packet Jc1 
-continue 
-main packet Jc-1 
-end 
+# toggle0 : force display of coreid 0
+define toggle0
+maint packet Jc0
+continue
+main packet Jc-1
+end
+# toggle1 : force display of coreid 1
+define toggle1
+maint packet Jc1
+continue
+main packet Jc-1
+end
 @end example
 @end itemize
 

@@ -47,39 +47,35 @@
 #include <strings.h>
 #endif
 
-
-#define OPENOCD_VERSION \
-		"Open On-Chip Debugger " VERSION RELSTR " (" PKGBLDDATE ")"
+#define OPENOCD_VERSION	\
+	"Open On-Chip Debugger " VERSION RELSTR " (" PKGBLDDATE ")"
 
 /* Give scripts and TELNET a way to find out what version this is */
 static int jim_version_command(Jim_Interp *interp, int argc,
-		Jim_Obj * const *argv)
+	Jim_Obj * const *argv)
 {
 	if (argc > 2)
-	{
 		return JIM_ERR;
-	}
 	const char *str = "";
-	char * version_str;
+	char *version_str;
 	version_str = OPENOCD_VERSION;
-	
+
 	if (argc == 2)
 		str = Jim_GetString(argv[1], NULL);
 
 	if (strcmp("git", str) == 0)
-	{
 		version_str = GITVERSION;
-	} 
-	
+
 	Jim_SetResult(interp, Jim_NewStringObj(interp, version_str, -1));
 
 	return JIM_OK;
 }
 
-static int log_target_callback_event_handler(struct target *target, enum target_event event, void *priv)
+static int log_target_callback_event_handler(struct target *target,
+	enum target_event event,
+	void *priv)
 {
-	switch (event)
-	{
+	switch (event) {
 		case TARGET_EVENT_GDB_START:
 			target->display = 0;
 			break;
@@ -87,8 +83,7 @@ static int log_target_callback_event_handler(struct target *target, enum target_
 			target->display = 1;
 			break;
 		case TARGET_EVENT_HALTED:
-			if (target->display)
-			{
+			if (target->display) {
 				/* do not display information when debugger caused the halt */
 				target_arch_state(target);
 			}
@@ -118,7 +113,7 @@ COMMAND_HANDLER(handle_init_command)
 		return ERROR_COMMAND_SYNTAX_ERROR;
 
 	int retval;
-	static int initialized = 0;
+	static int initialized;
 	if (initialized)
 		return ERROR_OK;
 
@@ -128,8 +123,8 @@ COMMAND_HANDLER(handle_init_command)
 	if (ERROR_OK != retval)
 		return ERROR_FAIL;
 
-	if ((retval = adapter_init(CMD_CTX)) != ERROR_OK)
-	{
+	retval = adapter_init(CMD_CTX);
+	if (retval != ERROR_OK) {
 		/* we must be able to set up the debug adapter */
 		return retval;
 	}
@@ -184,29 +179,6 @@ COMMAND_HANDLER(handle_add_script_search_dir_command)
 	return ERROR_OK;
 }
 
-
-static int jim_stacktrace_command(Jim_Interp *interp, int argc,
-		Jim_Obj * const *argv)
-{
-	if (argc != 1)
-	{
-		return JIM_ERR;
-	}
-	Jim_Obj * stacktrace = Jim_DuplicateObj(interp, interp->stackTrace);
-	
-	/* insert actual error site at beginning of list*/
-	Jim_Obj *procname = Jim_NewStringObj(interp, "", -1); /* Uhhh... don't know this one. */
-	Jim_ListInsertElements(interp, stacktrace, 0, 1, &procname);
-	Jim_Obj *filename = Jim_NewStringObj(interp, interp->errorFileName, -1);
-	Jim_ListInsertElements(interp, stacktrace, 1, 1, &filename);
-	Jim_Obj *line = Jim_NewIntObj(interp, interp->errorLine);
-	Jim_ListInsertElements(interp, stacktrace, 2, 1, &line);
-
-	Jim_SetResult(interp, stacktrace);
-
-	return JIM_OK;
-}
-
 static const struct command_registration openocd_command_handlers[] = {
 	{
 		.name = "version",
@@ -219,6 +191,7 @@ static const struct command_registration openocd_command_handlers[] = {
 		.handler = &handle_noinit_command,
 		.mode = COMMAND_CONFIG,
 		.help = "Prevent 'init' from being called at startup.",
+		.usage = ""
 	},
 	{
 		.name = "init",
@@ -228,22 +201,14 @@ static const struct command_registration openocd_command_handlers[] = {
 			"Changes command mode from CONFIG to EXEC.  "
 			"Unless 'noinit' is called, this command is "
 			"called automatically at the end of startup.",
-
+		.usage = ""
 	},
 	{
 		.name = "add_script_search_dir",
 		.handler = &handle_add_script_search_dir_command,
 		.mode = COMMAND_ANY,
 		.help = "dir to search for config files and scripts",
-
-	},
-	{
-		.name = "stacktrace",
-		.jim_handler = jim_stacktrace_command,
-		.mode = COMMAND_ANY,
-		.help = "returns the stacktrace as a list of triples: proc, file, line."
-		"The stack trace is reset when a new stack trace is being built after "
-		"a new failure has occurred.",
+		.usage = "<directory>"
 	},
 	COMMAND_REGISTRATION_DONE
 };
@@ -282,11 +247,9 @@ struct command_context *setup_command_handler(Jim_Interp *interp)
 		&mflash_register_commands,
 		NULL
 	};
-	for (unsigned i = 0; NULL != command_registrants[i]; i++)
-	{
+	for (unsigned i = 0; NULL != command_registrants[i]; i++) {
 		int retval = (*command_registrants[i])(cmd_ctx);
-		if (ERROR_OK != retval)
-		{
+		if (ERROR_OK != retval) {
 			command_done(cmd_ctx);
 			return NULL;
 		}
@@ -294,7 +257,7 @@ struct command_context *setup_command_handler(Jim_Interp *interp)
 	LOG_DEBUG("command registration: complete");
 
 	LOG_OUTPUT(OPENOCD_VERSION "\n"
-			"Licensed under GNU GPL v2\n");
+		"Licensed under GNU GPL v2\n");
 
 	global_cmd_ctx = cmd_ctx;
 
@@ -323,12 +286,7 @@ static int openocd_thread(int argc, char *argv[], struct command_context *cmd_ct
 	if (ERROR_OK != ret)
 		return EXIT_FAILURE;
 
-	ret = command_run_line(cmd_ctx, "init_targets");
-	if (ERROR_OK != ret)
-		ret = EXIT_FAILURE;
-
-	if (init_at_startup)
-	{
+	if (init_at_startup) {
 		ret = command_run_line(cmd_ctx, "init");
 		if (ERROR_OK != ret)
 			return EXIT_FAILURE;
@@ -360,7 +318,7 @@ int openocd_main(int argc, char *argv[])
 		return EXIT_FAILURE;
 
 	LOG_OUTPUT("For bug reports, read\n\t"
-		"http://openocd.berlios.de/doc/doxygen/bugs.html"
+		"http://openocd.sourceforge.net/doc/doxygen/bugs.html"
 		"\n");
 
 	command_context_mode(cmd_ctx, COMMAND_CONFIG);

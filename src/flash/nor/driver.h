@@ -20,6 +20,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
+
 #ifndef FLASH_NOR_DRIVER_H
 #define FLASH_NOR_DRIVER_H
 
@@ -48,13 +49,17 @@ struct flash_bank;
  * corresponding static <code>flash_driver_<i>callback</i>()</code>
  * routine in flash.c.
  */
-struct flash_driver
-{
+struct flash_driver {
 	/**
 	 * Gives a human-readable name of this flash driver,
 	 * This field is used to select and initialize the driver.
 	 */
 	const char *name;
+
+	/**
+	 * Gives a human-readable description of arguments.
+	 */
+	const char *usage;
 
 	/**
 	 * An array of driver-specific commands to register.  When called
@@ -195,7 +200,7 @@ struct flash_driver
 	/**
 	 * A more gentle flavor of filash_driver_s::probe, performing
 	 * setup with less noise.  Generally, driver routines should test
-	 * to seee if the bank has already been probed; if it has, the
+	 * to see if the bank has already been probed; if it has, the
 	 * driver probably should not perform its probe a second time.
 	 *
 	 * This callback is often called from the inside of other
@@ -208,7 +213,8 @@ struct flash_driver
 	int (*auto_probe)(struct flash_bank *bank);
 };
 
-#define FLASH_BANK_COMMAND_HANDLER(name) static __FLASH_BANK_COMMAND(name)
+#define FLASH_BANK_COMMAND_HANDLER(name) \
+	static __FLASH_BANK_COMMAND(name)
 
 /**
  * Find a NOR flash driver by its name.
@@ -217,4 +223,4 @@ struct flash_driver
  */
 struct flash_driver *flash_driver_find_by_name(const char *name);
 
-#endif // FLASH_NOR_DRIVER_H
+#endif /* FLASH_NOR_DRIVER_H */

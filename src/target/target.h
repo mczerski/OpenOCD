@@ -29,10 +29,9 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
+
 #ifndef TARGET_H
 #define TARGET_H
-
-#include <helper/types.h>
 
 struct reg;
 struct trace;
@@ -56,9 +55,7 @@ struct target_list;
  * also see: target_state_name();
  */
 
-
-enum target_state
-{
+enum target_state {
 	TARGET_UNKNOWN = 0,
 	TARGET_RUNNING = 1,
 	TARGET_HALTED = 2,
@@ -71,16 +68,14 @@ enum nvp_assert {
 	NVP_ASSERT,
 };
 
-enum target_reset_mode
-{
+enum target_reset_mode {
 	RESET_UNKNOWN = 0,
 	RESET_RUN = 1,		/* reset and let target run */
 	RESET_HALT = 2,		/* reset and halt target out of reset */
 	RESET_INIT = 3,		/* reset and halt target out of reset, then run init script */
 };
 
-enum target_debug_reason
-{
+enum target_debug_reason {
 	DBG_REASON_DBGRQ = 0,
 	DBG_REASON_BREAKPOINT = 1,
 	DBG_REASON_WATCHPOINT = 2,
@@ -90,14 +85,12 @@ enum target_debug_reason
 	DBG_REASON_UNDEFINED = 6
 };
 
-enum target_endianness
-{
+enum target_endianness {
 	TARGET_ENDIAN_UNKNOWN = 0,
 	TARGET_BIG_ENDIAN = 1, TARGET_LITTLE_ENDIAN = 2
 };
 
-struct working_area
-{
+struct working_area {
 	uint32_t address;
 	uint32_t size;
 	bool free;
@@ -105,26 +98,23 @@ struct working_area
 	struct working_area **user;
 	struct working_area *next;
 };
- 
-struct gdb_service
-{
+
+struct gdb_service {
 	struct target *target;
 	/*  field for smp display  */
 	/*  element 0 coreid currently displayed ( 1 till n) */
-    /*  element 1 coreid to be displayed at next resume 1 till n 0 means resume
-	 *  all cores
-	  core displayed  */
+	/*  element 1 coreid to be displayed at next resume 1 till n 0 means resume
+	 *  all cores core displayed  */
 	int32_t core[2];
 };
 
-// target_type.h contains the full definitionof struct targe_type
-struct target
-{
-	struct target_type *type;				/* target type definition (name, access functions) */
+/* target_type.h contains the full definition of struct target_type */
+struct target {
+	struct target_type *type;			/* target type definition (name, access functions) */
 	const char *cmd_name;				/* tcl Name of target */
 	int target_number;					/* DO NOT USE!  field to be removed in 2010 */
-	struct jtag_tap *tap;					/* where on the jtag chain is this */
-	int32_t coreid;							/* which device on the TAP? */
+	struct jtag_tap *tap;				/* where on the jtag chain is this */
+	int32_t coreid;						/* which device on the TAP? */
 	const char *variant;				/* what variant of this chip is it? */
 
 	/**
@@ -135,36 +125,37 @@ struct target
 	 */
 	bool examined;
 
-	/** true iff the  target is currently running a downloaded
-	 *  "algorithm" instetad of arbitrary user code.  OpenOCD code
-	 *  invoking algorithms is trusted to maintain correctness of
-	 *  any cached state (e.g. for flash status), which arbitrary
-	 *  code will have no reason to know about.
+	/**
+	 * true if the  target is currently running a downloaded
+	 * "algorithm" instead of arbitrary user code. OpenOCD code
+	 * invoking algorithms is trusted to maintain correctness of
+	 * any cached state (e.g. for flash status), which arbitrary
+	 * code will have no reason to know about.
 	 */
 	bool running_alg;
 
 	struct target_event_action *event_action;
 
 	int reset_halt;						/* attempt resetting the CPU into the halted mode? */
-	uint32_t working_area;					/* working area (initialized RAM). Evaluated
+	uint32_t working_area;				/* working area (initialised RAM). Evaluated
 										 * upon first allocation from virtual/physical address. */
 	bool working_area_virt_spec;		/* virtual address specified? */
 	uint32_t working_area_virt;			/* virtual address */
 	bool working_area_phys_spec;		/* virtual address specified? */
 	uint32_t working_area_phys;			/* physical address */
 	uint32_t working_area_size;			/* size in bytes */
-	uint32_t backup_working_area;			/* whether the content of the working area has to be preserved */
+	uint32_t backup_working_area;		/* whether the content of the working area has to be preserved */
 	struct working_area *working_areas;/* list of allocated working areas */
 	enum target_debug_reason debug_reason;/* reason why the target entered debug state */
 	enum target_endianness endianness;	/* target endianness */
-	// also see: target_state_name()
+	/* also see: target_state_name() */
 	enum target_state state;			/* the current backend-state (running, halted, ...) */
 	struct reg_cache *reg_cache;		/* the first register cache of the target (core regs) */
-	struct breakpoint *breakpoints;	/* list of breakpoints */
-	struct watchpoint *watchpoints;	/* list of watchpoints */
+	struct breakpoint *breakpoints;		/* list of breakpoints */
+	struct watchpoint *watchpoints;		/* list of watchpoints */
 	struct trace *trace_info;			/* generic trace information */
-	struct debug_msg_receiver *dbgmsg;/* list of debug message receivers */
-	uint32_t dbg_msg_enabled;				/* debug message status */
+	struct debug_msg_receiver *dbgmsg;	/* list of debug message receivers */
+	uint32_t dbg_msg_enabled;			/* debug message status */
 	void *arch_info;					/* architecture specific information */
 	struct target *next;				/* next target in list */
 
@@ -175,21 +166,20 @@ struct target
 
 	bool dbgbase_set;					/* By default the debug base is not set */
 	uint32_t dbgbase;					/* Really a Cortex-A specific option, but there is no
-	 	 	 	 	 	 	 	 	 	   system in place to support target specific options
-	 	 	 	 	 	 	 	 	 	   currently. */
+										 * system in place to support target specific options
+										 * currently. */
 	struct rtos *rtos;					/* Instance of Real Time Operating System support */
-	bool rtos_auto_detect;				/* A flag that indicates that the RTOS has been specified as "auto" 
-	                                     * and must be detected when symbols are offered */
+	bool rtos_auto_detect;				/* A flag that indicates that the RTOS has been specified as "auto"
+										 * and must be detected when symbols are offered */
 
-	int smp;								/*  add some target attributes for smp support */
+	int smp;							/* add some target attributes for smp support */
 	struct target_list *head;
-	/*  the gdb service is there in case of smp , we have only one gdb server
-	 *  for all smp target
-	 *  the target attached to the gdb is changing dynamically by changing
-	 *  gdb_service->target pointer */
+	/* the gdb service is there in case of smp, we have only one gdb server
+	 * for all smp target
+	 * the target attached to the gdb is changing dynamically by changing
+	 * gdb_service->target pointer */
 	struct gdb_service *gdb_service;
 };
-
 
 struct target_list {
 	struct target *target;
@@ -204,14 +194,7 @@ static inline const char *target_name(struct target *target)
 
 const char *debug_reason_name(struct target *t);
 
-enum target_event
-{
-	/* LD historical names
-	 * - Prior to the great TCL change
-	 * - June/July/Aug 2008
-	 * - Duane Ellis */
-	TARGET_EVENT_OLD_gdb_program_config,
-	TARGET_EVENT_OLD_pre_resume,
+enum target_event {
 
 	/* allow GDB to do stuff before others handle the halted event,
 	 * this is in lieu of defining ordering of invocation of events,
@@ -269,15 +252,13 @@ struct target_event_action {
 
 bool target_has_event_action(struct target *target, enum target_event event);
 
-struct target_event_callback
-{
+struct target_event_callback {
 	int (*callback)(struct target *target, enum target_event event, void *priv);
 	void *priv;
 	struct target_event_callback *next;
 };
 
-struct target_timer_callback
-{
+struct target_timer_callback {
 	int (*callback)(void *priv);
 	int time_ms;
 	int periodic;
@@ -291,12 +272,13 @@ int target_examine(void);
 
 int target_register_event_callback(
 		int (*callback)(struct target *target,
-				enum target_event event, void *priv),
+		enum target_event event, void *priv),
 		void *priv);
 int target_unregister_event_callback(
 		int (*callback)(struct target *target,
-				enum target_event event, void *priv),
+		enum target_event event, void *priv),
 		void *priv);
+
 /* Poll the status of the target, detect any error conditions and report them.
  *
  * Also note that this fn will clear such error conditions, so a subsequent
@@ -307,7 +289,7 @@ int target_unregister_event_callback(
  * fails, then a note is made of it, the error is sticky, but the memory
  * write loop still runs to completion. This improves performance in the
  * normal case as there is no need to verify that every single write succeed,
- * yet it is possible to detect error condtions.
+ * yet it is possible to detect error conditions.
  */
 int target_poll(struct target *target);
 int target_resume(struct target *target, int current, uint32_t address,
@@ -325,11 +307,11 @@ int target_register_timer_callback(int (*callback)(void *priv),
 int target_call_timer_callbacks(void);
 /**
  * Invoke this to ensure that e.g. polling timer callbacks happen before
- * a syncrhonous command completes.
+ * a synchronous command completes.
  */
 int target_call_timer_callbacks_now(void);
 
-struct target* get_current_target(struct command_context *cmd_ctx);
+struct target *get_current_target(struct command_context *cmd_ctx);
 struct target *get_target(const char *id);
 
 /**
@@ -342,20 +324,20 @@ const char *target_type_name(struct target *target);
 
 /**
  * Examine the specified @a target, letting it perform any
- * initialization that requires JTAG access.
+ * Initialisation that requires JTAG access.
  *
  * This routine is a wrapper for target->type->examine.
  */
 int target_examine_one(struct target *target);
 
-/// @returns @c true if target_set_examined() has been called.
+/** @returns @c true if target_set_examined() has been called. */
 static inline bool target_was_examined(struct target *target)
 {
 	return target->examined;
 }
 
-/// Sets the @c examined flag for the given target.
-/// Use in target->type->examine() after one-time setup is done.
+/** Sets the @c examined flag for the given target. */
+/** Use in target->type->examine() after one-time setup is done. */
 static inline void target_set_examined(struct target *target)
 {
 	target->examined = true;
@@ -369,10 +351,25 @@ static inline void target_set_examined(struct target *target)
 int target_add_breakpoint(struct target *target,
 		struct breakpoint *breakpoint);
 /**
+ * Add the @a ContextID breakpoint  for @a target.
+ *
+ * This routine is a wrapper for target->type->add_context_breakpoint.
+ */
+int target_add_context_breakpoint(struct target *target,
+		struct breakpoint *breakpoint);
+/**
+ * Add the @a ContextID & IVA breakpoint  for @a target.
+ *
+ * This routine is a wrapper for target->type->add_hybrid_breakpoint.
+ */
+int target_add_hybrid_breakpoint(struct target *target,
+		struct breakpoint *breakpoint);
+/**
  * Remove the @a breakpoint for @a target.
  *
  * This routine is a wrapper for target->type->remove_breakpoint.
  */
+
 int target_remove_breakpoint(struct target *target,
 		struct breakpoint *breakpoint);
 /**
@@ -415,6 +412,40 @@ int target_run_algorithm(struct target *target,
 		int num_reg_params, struct reg_param *reg_param,
 		uint32_t entry_point, uint32_t exit_point,
 		int timeout_ms, void *arch_info);
+
+/**
+ * Starts an algorithm in the background on the @a target given.
+ *
+ * This routine is a wrapper for target->type->start_algorithm.
+ */
+int target_start_algorithm(struct target *target,
+		int num_mem_params, struct mem_param *mem_params,
+		int num_reg_params, struct reg_param *reg_params,
+		uint32_t entry_point, uint32_t exit_point,
+		void *arch_info);
+
+/**
+ * Wait for an algorithm on the @a target given.
+ *
+ * This routine is a wrapper for target->type->wait_algorithm.
+ */
+int target_wait_algorithm(struct target *target,
+		int num_mem_params, struct mem_param *mem_params,
+		int num_reg_params, struct reg_param *reg_params,
+		uint32_t exit_point, int timeout_ms,
+		void *arch_info);
+
+/**
+ * This routine is a wrapper for asynchronous algorithms.
+ *
+ */
+int target_run_flash_async_algorithm(struct target *target,
+		uint8_t *buffer, uint32_t count, int block_size,
+		int num_mem_params, struct mem_param *mem_params,
+		int num_reg_params, struct reg_param *reg_params,
+		uint32_t buffer_start, uint32_t buffer_size,
+		uint32_t entry_point, uint32_t exit_point,
+		void *arch_info);
 
 /**
  * Read @a count items of @a size bytes from the memory of @a target at
@@ -483,13 +514,13 @@ int target_write_buffer(struct target *target,
 int target_read_buffer(struct target *target,
 		uint32_t address, uint32_t size, uint8_t *buffer);
 int target_checksum_memory(struct target *target,
-		uint32_t address, uint32_t size, uint32_t* crc);
+		uint32_t address, uint32_t size, uint32_t *crc);
 int target_blank_check_memory(struct target *target,
-		uint32_t address, uint32_t size, uint32_t* blank);
+		uint32_t address, uint32_t size, uint32_t *blank);
 int target_wait_state(struct target *target, enum target_state state, int ms);
 
 /** Return the *name* of this targets current state */
-const char *target_state_name( struct target *target );
+const char *target_state_name(struct target *target);
 
 /* DANGER!!!!!
  *
@@ -508,12 +539,13 @@ int target_alloc_working_area(struct target *target,
  * when ERROR_TARGET_RESOURCE_NOT_AVAILABLE is returned.
  *
  * This allows the calling code to *try* to allocate target memory
- * and have a fallback to another behavior(slower?).
+ * and have a fallback to another behaviour(slower?).
  */
 int target_alloc_working_area_try(struct target *target,
 		uint32_t size, struct working_area **area);
 int target_free_working_area(struct target *target, struct working_area *area);
 void target_free_all_working_areas(struct target *target);
+uint32_t target_get_working_area_avail(struct target *target);
 
 extern struct target *all_targets;
 
@@ -523,6 +555,11 @@ uint16_t target_buffer_get_u16(struct target *target, const uint8_t *buffer);
 void target_buffer_set_u32(struct target *target, uint8_t *buffer, uint32_t value);
 void target_buffer_set_u24(struct target *target, uint8_t *buffer, uint32_t value);
 void target_buffer_set_u16(struct target *target, uint8_t *buffer, uint16_t value);
+
+void target_buffer_get_u32_array(struct target *target, const uint8_t *buffer, uint32_t count, uint32_t *dstbuf);
+void target_buffer_get_u16_array(struct target *target, const uint8_t *buffer, uint32_t count, uint16_t *dstbuf);
+void target_buffer_set_u32_array(struct target *target, uint8_t *buffer, uint32_t count, uint32_t *srcbuf);
+void target_buffer_set_u16_array(struct target *target, uint8_t *buffer, uint32_t count, uint16_t *srcbuf);
 
 int target_read_u32(struct target *target, uint32_t address, uint32_t *value);
 int target_read_u16(struct target *target, uint32_t address, uint16_t *value);

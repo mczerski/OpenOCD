@@ -23,6 +23,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
+
 #ifndef ARMV7M_COMMON_H
 #define ARMV7M_COMMON_H
 
@@ -39,9 +40,7 @@ extern uint8_t armv7m_gdb_dummy_cpsr_value[];
 extern struct reg armv7m_gdb_dummy_cpsr_reg;
 #endif
 
-
-enum armv7m_mode
-{
+enum armv7m_mode {
 	ARMV7M_MODE_THREAD = 0,
 	ARMV7M_MODE_USER_THREAD = 1,
 	ARMV7M_MODE_HANDLER = 2,
@@ -49,9 +48,10 @@ enum armv7m_mode
 };
 
 extern char *armv7m_mode_strings[];
+extern const int armv7m_psp_reg_map[];
+extern const int armv7m_msp_reg_map[];
 
-enum armv7m_regtype
-{
+enum armv7m_regtype {
 	ARMV7M_REGISTER_CORE_GP,
 	ARMV7M_REGISTER_CORE_SP,
 	ARMV7M_REGISTER_MEMMAP
@@ -60,10 +60,9 @@ enum armv7m_regtype
 char *armv7m_exception_string(int number);
 
 /* offsets into armv7m core register cache */
-enum
-{
+enum {
 	/* for convenience, the first set of indices match
-	 * the Cortex-M3 DCRSR selectors
+	 * the Cortex-M3/-M4 DCRSR selectors
 	 */
 	ARMV7M_R0,
 	ARMV7M_R1,
@@ -94,12 +93,75 @@ enum
 	ARMV7M_BASEPRI,
 	ARMV7M_FAULTMASK,
 	ARMV7M_CONTROL,
+
+	/* 32bit Floating-point registers */
+	ARMV7M_S0,
+	ARMV7M_S1,
+	ARMV7M_S2,
+	ARMV7M_S3,
+	ARMV7M_S4,
+	ARMV7M_S5,
+	ARMV7M_S6,
+	ARMV7M_S7,
+	ARMV7M_S8,
+	ARMV7M_S9,
+	ARMV7M_S10,
+	ARMV7M_S11,
+	ARMV7M_S12,
+	ARMV7M_S13,
+	ARMV7M_S14,
+	ARMV7M_S15,
+	ARMV7M_S16,
+	ARMV7M_S17,
+	ARMV7M_S18,
+	ARMV7M_S19,
+	ARMV7M_S20,
+	ARMV7M_S21,
+	ARMV7M_S22,
+	ARMV7M_S23,
+	ARMV7M_S24,
+	ARMV7M_S25,
+	ARMV7M_S26,
+	ARMV7M_S27,
+	ARMV7M_S28,
+	ARMV7M_S29,
+	ARMV7M_S30,
+	ARMV7M_S31,
+
+	/* 64bit Floating-point registers */
+	ARMV7M_D0,
+	ARMV7M_D1,
+	ARMV7M_D2,
+	ARMV7M_D3,
+	ARMV7M_D4,
+	ARMV7M_D5,
+	ARMV7M_D6,
+	ARMV7M_D7,
+	ARMV7M_D8,
+	ARMV7M_D9,
+	ARMV7M_D10,
+	ARMV7M_D11,
+	ARMV7M_D12,
+	ARMV7M_D13,
+	ARMV7M_D14,
+	ARMV7M_D15,
+
+	/* Floating-point status registers */
+	ARMV7M_FPSID,
+	ARMV7M_FPSCR,
+	ARMV7M_FPEXC,
+
+	ARMV7M_LAST_REG,
+};
+
+enum {
+	FP_NONE = 0,
+	FPv4_SP,
 };
 
 #define ARMV7M_COMMON_MAGIC 0x2A452A45
 
-struct armv7m_common
-{
+struct armv7m_common {
 	struct arm	arm;
 
 	int common_magic;
@@ -108,7 +170,11 @@ struct armv7m_common
 	int exception_number;
 	struct adiv5_dap dap;
 
+	int fp_feature;
 	uint32_t demcr;
+
+	/* stlink is a high level adapter, does not support all functions */
+	bool stlink;
 
 	/* Direct processor core register read and writes */
 	int (*load_core_reg_u32)(struct target *target,
@@ -137,15 +203,15 @@ static inline bool is_armv7m(struct armv7m_common *armv7m)
 	return armv7m->common_magic == ARMV7M_COMMON_MAGIC;
 }
 
-struct armv7m_algorithm
-{
+struct armv7m_algorithm {
 	int common_magic;
 
 	enum armv7m_mode core_mode;
+
+	uint32_t context[ARMV7M_LAST_REG]; /* ARMV7M_NUM_REGS */
 };
 
-struct armv7m_core_reg
-{
+struct armv7m_core_reg {
 	uint32_t num;
 	enum armv7m_regtype type;
 	struct target *target;
@@ -168,14 +234,26 @@ int armv7m_run_algorithm(struct target *target,
 		uint32_t entry_point, uint32_t exit_point,
 		int timeout_ms, void *arch_info);
 
+int armv7m_start_algorithm(struct target *target,
+		int num_mem_params, struct mem_param *mem_params,
+		int num_reg_params, struct reg_param *reg_params,
+		uint32_t entry_point, uint32_t exit_point,
+		void *arch_info);
+
+int armv7m_wait_algorithm(struct target *target,
+		int num_mem_params, struct mem_param *mem_params,
+		int num_reg_params, struct reg_param *reg_params,
+		uint32_t exit_point, int timeout_ms,
+		void *arch_info);
+
 int armv7m_invalidate_core_regs(struct target *target);
 
 int armv7m_restore_context(struct target *target);
 
 int armv7m_checksum_memory(struct target *target,
-		uint32_t address, uint32_t count, uint32_t* checksum);
+		uint32_t address, uint32_t count, uint32_t *checksum);
 int armv7m_blank_check_memory(struct target *target,
-		uint32_t address, uint32_t count, uint32_t* blank);
+		uint32_t address, uint32_t count, uint32_t *blank);
 
 int armv7m_maybe_skip_bkpt_inst(struct target *target, bool *inst_found);
 

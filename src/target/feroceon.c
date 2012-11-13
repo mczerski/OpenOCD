@@ -58,11 +58,10 @@
 #include "register.h"
 #include "arm_opcodes.h"
 
-
 static int feroceon_assert_reset(struct target *target)
 {
-	struct arm *armv4_5 = target->arch_info;
-	struct arm7_9_common *arm7_9 = armv4_5->arch_info;
+	struct arm *arm = target->arch_info;
+	struct arm7_9_common *arm7_9 = arm->arch_info;
 	int ud = arm7_9->use_dbgrq;
 
 	arm7_9->use_dbgrq = 0;
@@ -115,8 +114,8 @@ static int feroceon_dummy_clock_out(struct arm_jtag *jtag_info, uint32_t instr)
 static void feroceon_change_to_arm(struct target *target, uint32_t *r0,
 		uint32_t *pc)
 {
-	struct arm *armv4_5 = target->arch_info;
-	struct arm7_9_common *arm7_9 = armv4_5->arch_info;
+	struct arm *arm = target->arch_info;
+	struct arm7_9_common *arm7_9 = arm->arch_info;
 	struct arm_jtag *jtag_info = &arm7_9->jtag_info;
 
 	/*
@@ -160,11 +159,11 @@ static void feroceon_change_to_arm(struct target *target, uint32_t *r0,
 }
 
 static void feroceon_read_core_regs(struct target *target,
-		uint32_t mask, uint32_t* core_regs[16])
+		uint32_t mask, uint32_t *core_regs[16])
 {
 	int i;
-	struct arm *armv4_5 = target->arch_info;
-	struct arm7_9_common *arm7_9 = armv4_5->arch_info;
+	struct arm *arm = target->arch_info;
+	struct arm7_9_common *arm7_9 = arm->arch_info;
 	struct arm_jtag *jtag_info = &arm7_9->jtag_info;
 
 	arm9tdmi_clock_out(jtag_info, ARMV4_5_STMIA(0, mask & 0xffff, 0, 0), 0, NULL, 0);
@@ -180,11 +179,11 @@ static void feroceon_read_core_regs(struct target *target,
 }
 
 static void feroceon_read_core_regs_target_buffer(struct target *target,
-		uint32_t mask, void* buffer, int size)
+		uint32_t mask, void *buffer, int size)
 {
 	int i;
-	struct arm *armv4_5 = target->arch_info;
-	struct arm7_9_common *arm7_9 = armv4_5->arch_info;
+	struct arm *arm = target->arch_info;
+	struct arm7_9_common *arm7_9 = arm->arch_info;
 	struct arm_jtag *jtag_info = &arm7_9->jtag_info;
 	int be = (target->endianness == TARGET_BIG_ENDIAN) ? 1 : 0;
 	uint32_t *buf_u32 = buffer;
@@ -195,11 +194,9 @@ static void feroceon_read_core_regs_target_buffer(struct target *target,
 	arm9tdmi_clock_out(jtag_info, ARMV4_5_NOP, 0, NULL, 0);
 	arm9tdmi_clock_out(jtag_info, ARMV4_5_NOP, 0, NULL, 0);
 
-	for (i = 0; i <= 15; i++)
-	{
+	for (i = 0; i <= 15; i++) {
 		if (mask & (1 << i)) {
-			switch (size)
-			{
+			switch (size) {
 				case 4:
 					arm9tdmi_clock_data_in_endianness(jtag_info, buf_u32++, 4, be);
 					break;
@@ -219,8 +216,8 @@ static void feroceon_read_core_regs_target_buffer(struct target *target,
 
 static void feroceon_read_xpsr(struct target *target, uint32_t *xpsr, int spsr)
 {
-	struct arm *armv4_5 = target->arch_info;
-	struct arm7_9_common *arm7_9 = armv4_5->arch_info;
+	struct arm *arm = target->arch_info;
+	struct arm7_9_common *arm7_9 = arm->arch_info;
 	struct arm_jtag *jtag_info = &arm7_9->jtag_info;
 
 	arm9tdmi_clock_out(jtag_info, ARMV4_5_MRS(0, spsr & 1), 0, NULL, 0);
@@ -242,8 +239,8 @@ static void feroceon_read_xpsr(struct target *target, uint32_t *xpsr, int spsr)
 
 static void feroceon_write_xpsr(struct target *target, uint32_t xpsr, int spsr)
 {
-	struct arm *armv4_5 = target->arch_info;
-	struct arm7_9_common *arm7_9 = armv4_5->arch_info;
+	struct arm *arm = target->arch_info;
+	struct arm7_9_common *arm7_9 = arm->arch_info;
 	struct arm_jtag *jtag_info = &arm7_9->jtag_info;
 
 	LOG_DEBUG("xpsr: %8.8" PRIx32 ", spsr: %i", xpsr, spsr);
@@ -284,8 +281,8 @@ static void feroceon_write_xpsr(struct target *target, uint32_t xpsr, int spsr)
 static void feroceon_write_xpsr_im8(struct target *target,
 		uint8_t xpsr_im, int rot, int spsr)
 {
-	struct arm *armv4_5 = target->arch_info;
-	struct arm7_9_common *arm7_9 = armv4_5->arch_info;
+	struct arm *arm = target->arch_info;
+	struct arm7_9_common *arm7_9 = arm->arch_info;
 	struct arm_jtag *jtag_info = &arm7_9->jtag_info;
 
 	LOG_DEBUG("xpsr_im: %2.2x, rot: %i, spsr: %i", xpsr_im, rot, spsr);
@@ -303,8 +300,8 @@ static void feroceon_write_core_regs(struct target *target,
 		uint32_t mask, uint32_t core_regs[16])
 {
 	int i;
-	struct arm *armv4_5 = target->arch_info;
-	struct arm7_9_common *arm7_9 = armv4_5->arch_info;
+	struct arm *arm = target->arch_info;
+	struct arm7_9_common *arm7_9 = arm->arch_info;
 	struct arm_jtag *jtag_info = &arm7_9->jtag_info;
 
 	arm9tdmi_clock_out(jtag_info, ARMV4_5_LDMIA(0, mask & 0xffff, 0, 0), 0, NULL, 0);
@@ -322,8 +319,8 @@ static void feroceon_write_core_regs(struct target *target,
 
 static void feroceon_branch_resume(struct target *target)
 {
-	struct arm *armv4_5 = target->arch_info;
-	struct arm7_9_common *arm7_9 = armv4_5->arch_info;
+	struct arm *arm = target->arch_info;
+	struct arm7_9_common *arm7_9 = arm->arch_info;
 	struct arm_jtag *jtag_info = &arm7_9->jtag_info;
 
 	arm9tdmi_clock_out(jtag_info, ARMV4_5_NOP, 0, NULL, 0);
@@ -339,18 +336,18 @@ static void feroceon_branch_resume_thumb(struct target *target)
 {
 	LOG_DEBUG("-");
 
-	struct arm *armv4_5 = target->arch_info;
-	struct arm7_9_common *arm7_9 = armv4_5->arch_info;
+	struct arm *arm = target->arch_info;
+	struct arm7_9_common *arm7_9 = arm->arch_info;
 	struct arm_jtag *jtag_info = &arm7_9->jtag_info;
-	uint32_t r0 = buf_get_u32(armv4_5->core_cache->reg_list[0].value, 0, 32);
-	uint32_t pc = buf_get_u32(armv4_5->pc->value, 0, 32);
+	uint32_t r0 = buf_get_u32(arm->core_cache->reg_list[0].value, 0, 32);
+	uint32_t pc = buf_get_u32(arm->pc->value, 0, 32);
 
 	arm9tdmi_clock_out(jtag_info, ARMV4_5_NOP, 0, NULL, 0);
 	arm9tdmi_clock_out(jtag_info, ARMV4_5_NOP, 0, NULL, 0);
 	arm9tdmi_clock_out(jtag_info, ARMV4_5_NOP, 0, NULL, 0);
 	arm9tdmi_clock_out(jtag_info, ARMV4_5_NOP, 0, NULL, 0);
 
-	arm9tdmi_clock_out(jtag_info, 0xE28F0001, 0, NULL, 0); // add r0,pc,#1
+	arm9tdmi_clock_out(jtag_info, 0xE28F0001, 0, NULL, 0); /* add r0,pc,#1 */
 	arm9tdmi_clock_out(jtag_info, ARMV4_5_BX(0), 0, NULL, 0);
 	arm9tdmi_clock_out(jtag_info, ARMV4_5_NOP, 0, NULL, 0);
 	arm9tdmi_clock_out(jtag_info, ARMV4_5_NOP, 0, NULL, 0);
@@ -373,8 +370,8 @@ static void feroceon_branch_resume_thumb(struct target *target)
 static int feroceon_read_cp15(struct target *target, uint32_t op1,
 		uint32_t op2, uint32_t CRn, uint32_t CRm, uint32_t *value)
 {
-	struct arm *armv4_5 = target->arch_info;
-	struct arm7_9_common *arm7_9 = armv4_5->arch_info;
+	struct arm *arm = target->arch_info;
+	struct arm7_9_common *arm7_9 = arm->arch_info;
 	struct arm_jtag *jtag_info = &arm7_9->jtag_info;
 	int err;
 
@@ -396,8 +393,8 @@ static int feroceon_read_cp15(struct target *target, uint32_t op1,
 static int feroceon_write_cp15(struct target *target, uint32_t op1,
 		uint32_t op2, uint32_t CRn, uint32_t CRm, uint32_t value)
 {
-	struct arm *armv4_5 = target->arch_info;
-	struct arm7_9_common *arm7_9 = armv4_5->arch_info;
+	struct arm *arm = target->arch_info;
+	struct arm7_9_common *arm7_9 = arm->arch_info;
 	struct arm_jtag *jtag_info = &arm7_9->jtag_info;
 
 	arm9tdmi_clock_out(jtag_info, ARMV4_5_LDMIA(0, 1, 0, 0), 0, NULL, 0);
@@ -415,8 +412,8 @@ static int feroceon_write_cp15(struct target *target, uint32_t op1,
 
 static void feroceon_set_dbgrq(struct target *target)
 {
-	struct arm *armv4_5 = target->arch_info;
-	struct arm7_9_common *arm7_9 = armv4_5->arch_info;
+	struct arm *arm = target->arch_info;
+	struct arm7_9_common *arm7_9 = arm->arch_info;
 	struct reg *dbg_ctrl = &arm7_9->eice_cache->reg_list[EICE_DBG_CTRL];
 
 	buf_set_u32(dbg_ctrl->value, 0, 8, 2);
@@ -425,8 +422,8 @@ static void feroceon_set_dbgrq(struct target *target)
 
 static void feroceon_enable_single_step(struct target *target, uint32_t next_pc)
 {
-	struct arm *armv4_5 = target->arch_info;
-	struct arm7_9_common *arm7_9 = armv4_5->arch_info;
+	struct arm *arm = target->arch_info;
+	struct arm7_9_common *arm7_9 = arm->arch_info;
 
 	/* set a breakpoint there */
 	embeddedice_write_reg(&arm7_9->eice_cache->reg_list[EICE_W0_ADDR_VALUE], next_pc);
@@ -438,8 +435,8 @@ static void feroceon_enable_single_step(struct target *target, uint32_t next_pc)
 
 static void feroceon_disable_single_step(struct target *target)
 {
-	struct arm *armv4_5 = target->arch_info;
-	struct arm7_9_common *arm7_9 = armv4_5->arch_info;
+	struct arm *arm = target->arch_info;
+	struct arm7_9_common *arm7_9 = arm->arch_info;
 
 	embeddedice_store_reg(&arm7_9->eice_cache->reg_list[EICE_W0_ADDR_VALUE]);
 	embeddedice_store_reg(&arm7_9->eice_cache->reg_list[EICE_W0_ADDR_MASK]);
@@ -452,9 +449,7 @@ static int feroceon_examine_debug_reason(struct target *target)
 {
 	/* the MOE is not implemented */
 	if (target->debug_reason != DBG_REASON_SINGLESTEP)
-	{
 		target->debug_reason = DBG_REASON_DBGRQ;
-	}
 
 	return ERROR_OK;
 }
@@ -463,9 +458,9 @@ static int feroceon_bulk_write_memory(struct target *target,
 		uint32_t address, uint32_t count, const uint8_t *buffer)
 {
 	int retval;
-	struct arm *armv4_5 = target->arch_info;
-	struct arm7_9_common *arm7_9 = armv4_5->arch_info;
-	enum arm_state core_state = armv4_5->core_state;
+	struct arm *arm = target->arch_info;
+	struct arm7_9_common *arm7_9 = arm->arch_info;
+	enum arm_state core_state = arm->core_state;
 	uint32_t x, flip, shift, save[7];
 	uint32_t i;
 
@@ -473,8 +468,7 @@ static int feroceon_bulk_write_memory(struct target *target,
 	 * We can't use the dcc flow control bits, so let's transfer data
 	 * with 31 bits and flip the MSB each time a new data word is sent.
 	 */
-	static uint32_t dcc_code[] =
-	{
+	static uint32_t dcc_code[] = {
 		0xee115e10,	/* 3:	mrc	p14, 0, r5, c1, c0, 0	*/
 		0xe3a0301e,	/* 1:	mov	r3, #30			*/
 		0xe3a04002,	/*	mov	r4, #2			*/
@@ -503,13 +497,11 @@ static int feroceon_bulk_write_memory(struct target *target,
 		return target_write_memory(target, address, 4, count, buffer);
 
 	/* regrab previously allocated working_area, or allocate a new one */
-	if (!arm7_9->dcc_working_area)
-	{
+	if (!arm7_9->dcc_working_area) {
 		uint8_t dcc_code_buf[dcc_size];
 
 		/* make sure we have a working area */
-		if (target_alloc_working_area(target, dcc_size, &arm7_9->dcc_working_area) != ERROR_OK)
-		{
+		if (target_alloc_working_area(target, dcc_size, &arm7_9->dcc_working_area) != ERROR_OK) {
 			LOG_INFO("no working area available, falling back to memory writes");
 			return target_write_memory(target, address, 4, count, buffer);
 		}
@@ -519,22 +511,22 @@ static int feroceon_bulk_write_memory(struct target *target,
 			target_buffer_set_u32(target, dcc_code_buf + i*4, dcc_code[i]);
 
 		/* write DCC code to working area */
-		if ((retval = target_write_memory(target, arm7_9->dcc_working_area->address, 4, dcc_size/4, dcc_code_buf)) != ERROR_OK)
-		{
+		retval = target_write_memory(target,
+				arm7_9->dcc_working_area->address, 4, dcc_size/4, dcc_code_buf);
+		if (retval != ERROR_OK)
 			return retval;
-		}
 	}
 
 	/* backup clobbered processor state */
 	for (i = 0; i <= 5; i++)
-		save[i] = buf_get_u32(armv4_5->core_cache->reg_list[i].value, 0, 32);
-	save[i] = buf_get_u32(armv4_5->pc->value, 0, 32);
+		save[i] = buf_get_u32(arm->core_cache->reg_list[i].value, 0, 32);
+	save[i] = buf_get_u32(arm->pc->value, 0, 32);
 
 	/* set up target address in r0 */
-	buf_set_u32(armv4_5->core_cache->reg_list[0].value, 0, 32, address);
-	armv4_5->core_cache->reg_list[0].valid = 1;
-	armv4_5->core_cache->reg_list[0].dirty = 1;
-	armv4_5->core_state = ARM_STATE_ARM;
+	buf_set_u32(arm->core_cache->reg_list[0].value, 0, 32, address);
+	arm->core_cache->reg_list[0].valid = 1;
+	arm->core_cache->reg_list[0].dirty = 1;
+	arm->core_state = ARM_STATE_ARM;
 
 	embeddedice_write_reg(&arm7_9->eice_cache->reg_list[EICE_COMMS_DATA], 0);
 	arm7_9_resume(target, 0, arm7_9->dcc_working_area->address, 1, 1);
@@ -543,14 +535,12 @@ static int feroceon_bulk_write_memory(struct target *target,
 	x = 0;
 	flip = 0;
 	shift = 1;
-	for (i = 0; i < count; i++)
-	{
+	for (i = 0; i < count; i++) {
 		uint32_t y = target_buffer_get_u32(target, buffer);
 		uint32_t z = (x >> 1) | (y >> shift) | (flip ^= 0x80000000);
 		embeddedice_write_reg(&arm7_9->eice_cache->reg_list[EICE_COMMS_DATA], z);
 		x = y << (32 - shift);
-		if (++shift >= 32 || i + 1 >= count)
-		{
+		if (++shift >= 32 || i + 1 >= count) {
 			z = (x >> 1) | (flip ^= 0x80000000);
 			embeddedice_write_reg(&arm7_9->eice_cache->reg_list[EICE_COMMS_DATA], z);
 			x = 0;
@@ -563,28 +553,27 @@ static int feroceon_bulk_write_memory(struct target *target,
 	if (retval == ERROR_OK)
 		retval = target_wait_state(target, TARGET_HALTED, 500);
 	if (retval == ERROR_OK) {
-                uint32_t endaddress =
-			buf_get_u32(armv4_5->core_cache->reg_list[0].value, 0, 32);
+		uint32_t endaddress =
+			buf_get_u32(arm->core_cache->reg_list[0].value, 0, 32);
 		if (endaddress != address + count*4) {
 			LOG_ERROR("DCC write failed,"
 				" expected end address 0x%08" PRIx32
 				" got 0x%0" PRIx32 "",
-			       	address + count*4, endaddress);
+				address + count*4, endaddress);
 			retval = ERROR_FAIL;
 		}
 	}
 
 	/* restore target state */
-	for (i = 0; i <= 5; i++)
-	{
-		buf_set_u32(armv4_5->core_cache->reg_list[i].value, 0, 32, save[i]);
-		armv4_5->core_cache->reg_list[i].valid = 1;
-		armv4_5->core_cache->reg_list[i].dirty = 1;
+	for (i = 0; i <= 5; i++) {
+		buf_set_u32(arm->core_cache->reg_list[i].value, 0, 32, save[i]);
+		arm->core_cache->reg_list[i].valid = 1;
+		arm->core_cache->reg_list[i].dirty = 1;
 	}
-	buf_set_u32(armv4_5->pc->value, 0, 32, save[i]);
-	armv4_5->pc->valid = 1;
-	armv4_5->pc->dirty = 1;
-	armv4_5->core_state = core_state;
+	buf_set_u32(arm->pc->value, 0, 32, save[i]);
+	arm->pc->valid = 1;
+	arm->pc->dirty = 1;
+	arm->core_state = core_state;
 
 	return retval;
 }
@@ -598,8 +587,8 @@ static int feroceon_init_target(struct command_context *cmd_ctx,
 
 static void feroceon_common_setup(struct target *target)
 {
-	struct arm *armv4_5 = target->arch_info;
-	struct arm7_9_common *arm7_9 = armv4_5->arch_info;
+	struct arm *arm = target->arch_info;
+	struct arm7_9_common *arm7_9 = arm->arch_info;
 
 	/* override some insn sequence functions */
 	arm7_9->change_to_arm = feroceon_change_to_arm;
@@ -631,7 +620,7 @@ static void feroceon_common_setup(struct target *target)
 
 static int feroceon_target_create(struct target *target, Jim_Interp *interp)
 {
-	struct arm926ejs_common *arm926ejs = calloc(1,sizeof(struct arm926ejs_common));
+	struct arm926ejs_common *arm926ejs = calloc(1, sizeof(struct arm926ejs_common));
 
 	arm926ejs_init_arch_info(target, arm926ejs, target->tap);
 	feroceon_common_setup(target);
@@ -645,7 +634,7 @@ static int feroceon_target_create(struct target *target, Jim_Interp *interp)
 
 static int dragonite_target_create(struct target *target, Jim_Interp *interp)
 {
-	struct arm966e_common *arm966e = calloc(1,sizeof(struct arm966e_common));
+	struct arm966e_common *arm966e = calloc(1, sizeof(struct arm966e_common));
 
 	arm966e_init_arch_info(target, arm966e, target->tap);
 	feroceon_common_setup(target);
@@ -655,7 +644,7 @@ static int dragonite_target_create(struct target *target, Jim_Interp *interp)
 
 static int feroceon_examine(struct target *target)
 {
-	struct arm *armv4_5;
+	struct arm *arm;
 	struct arm7_9_common *arm7_9;
 	int retval;
 
@@ -663,8 +652,8 @@ static int feroceon_examine(struct target *target)
 	if (retval != ERROR_OK)
 		return retval;
 
-	armv4_5 = target->arch_info;
-	arm7_9 = armv4_5->arch_info;
+	arm = target->arch_info;
+	arm7_9 = arm->arch_info;
 
 	/* the COMMS_CTRL bits are all contiguous */
 	if (buf_get_u32(arm7_9->eice_cache->reg_list[EICE_COMMS_CTRL].value, 2, 4) != 6)
@@ -687,8 +676,7 @@ static int feroceon_examine(struct target *target)
 	return ERROR_OK;
 }
 
-struct target_type feroceon_target =
-{
+struct target_type feroceon_target = {
 	.name = "feroceon",
 
 	.poll = arm7_9_poll,
@@ -726,8 +714,7 @@ struct target_type feroceon_target =
 	.examine = feroceon_examine,
 };
 
-struct target_type dragonite_target =
-{
+struct target_type dragonite_target = {
 	.name = "dragonite",
 
 	.poll = arm7_9_poll,
@@ -764,4 +751,3 @@ struct target_type dragonite_target =
 	.init_target = feroceon_init_target,
 	.examine = feroceon_examine,
 };
-

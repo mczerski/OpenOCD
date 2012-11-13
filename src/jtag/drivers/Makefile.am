@@ -5,7 +5,8 @@ noinst_LTLIBRARIES = libocdjtagdrivers.la
 libocdjtagdrivers_la_SOURCES = \
 	$(DRIVERFILES)
 
-nobase_dist_pkgdata_DATA =
+ocddatadir = $(pkglibdir)
+nobase_dist_ocddata_DATA =
 
 ULINK_FIRMWARE = $(srcdir)/OpenULINK
 
@@ -20,6 +21,16 @@ if USB
 DRIVERFILES += usb_common.c
 endif
 
+if USE_LIBUSB1
+DRIVERFILES += libusb1_common.c
+else
+
+if USE_LIBUSB0
+DRIVERFILES += libusb0_common.c
+endif
+
+endif
+
 if BITBANG
 DRIVERFILES += bitbang.c
 endif
@@ -31,6 +42,9 @@ DRIVERFILES += dummy.c
 endif
 if FT2232_DRIVER
 DRIVERFILES += ft2232.c
+endif
+if FTDI_DRIVER
+DRIVERFILES += ftdi.c mpsse.c
 endif
 if USB_BLASTER_DRIVER
 DRIVERFILES += usb_blaster/usb_blaster.c
@@ -69,9 +83,15 @@ DRIVERFILES += rlink.c rlink_speed_table.c
 endif
 if ULINK
 DRIVERFILES += ulink.c
-nobase_dist_pkgdata_DATA += $(ULINK_FIRMWARE)/ulink_firmware.hex
+nobase_dist_ocddata_DATA += $(ULINK_FIRMWARE)/ulink_firmware.hex
 endif
 if VSLLINK
+DRIVERFILES += versaloon/usbtoxxx/usbtogpio.c
+DRIVERFILES += versaloon/usbtoxxx/usbtojtagraw.c
+DRIVERFILES += versaloon/usbtoxxx/usbtoswd.c
+DRIVERFILES += versaloon/usbtoxxx/usbtopwr.c
+DRIVERFILES += versaloon/usbtoxxx/usbtoxxx.c
+DRIVERFILES += versaloon/versaloon.c
 DRIVERFILES += vsllink.c
 endif
 if ARMJTAGEW
@@ -80,15 +100,40 @@ endif
 if BUSPIRATE
 DRIVERFILES += buspirate.c
 endif
+if REMOTE_BITBANG
+DRIVERFILES += remote_bitbang.c
+endif
+if STLINK
+DRIVERFILES += stlink_usb.c
+endif
+if OSBDM
+DRIVERFILES += osbdm.c
+endif
+if OPENDOUS
+DRIVERFILES += opendous.c
+endif
+if SYSFSGPIO
+DRIVERFILES += sysfsgpio.c
+endif
 
 noinst_HEADERS = \
 	bitbang.h \
 	bitq.h \
+	ftd2xx_common.h \
+	libusb0_common.h \
+	libusb1_common.h \
+	libusb_common.h \
 	minidriver_imp.h \
+	mpsse.h \
 	rlink.h \
 	rlink_dtc_cmd.h \
 	rlink_ep1_cmd.h \
 	rlink_st7.h \
-	usb_common.h
+	usb_common.h \
+	versaloon/usbtoxxx/usbtoxxx.h \
+	versaloon/usbtoxxx/usbtoxxx_internal.h \
+	versaloon/versaloon.h \
+	versaloon/versaloon_include.h \
+	versaloon/versaloon_internal.h
 
 MAINTAINERCLEANFILES = $(srcdir)/Makefile.in

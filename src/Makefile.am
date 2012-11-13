@@ -15,11 +15,7 @@ SUBDIRS = \
 lib_LTLIBRARIES = libopenocd.la
 bin_PROGRAMS = openocd
 
-if ECOSBOARD
-MAINFILE = ecosboard.c
-else
 MAINFILE = main.c
-endif
 
 openocd_SOURCES = $(MAINFILE)
 openocd_LDADD = libopenocd.la
@@ -28,6 +24,10 @@ if INTERNAL_JIMTCL
 openocd_LDADD += $(top_builddir)/jimtcl/libjim.a
 else
 openocd_LDADD += -ljim
+endif
+
+if ULINK
+openocd_LDADD += -lm
 endif
 
 libopenocd_la_SOURCES = \
@@ -77,26 +77,13 @@ endif
 endif
 endif
 
-if USBPROG
-LIBUSB = -lusb
-else
-if JLINK
-LIBUSB = -lusb
-else
-if RLINK
-LIBUSB = -lusb
-else
-if ULINK
-LIBUSB = -lusb
-else
-if VSLLINK
-LIBUSB = -lusb
-else
 LIBUSB =
+if USE_LIBUSB1
+LIBUSB += -lusb-1.0
 endif
-endif
-endif
-endif
+
+if USE_LIBUSB0
+LIBUSB += -lusb
 endif
 
 libopenocd_la_LIBADD = \

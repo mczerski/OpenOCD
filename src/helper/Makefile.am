@@ -3,13 +3,7 @@ include $(top_srcdir)/common.mk
 METASOURCES = AUTO
 noinst_LTLIBRARIES = libhelper.la
 
-if ECOSBOARD
-CONFIGFILES = time_support_ecos.c
-else
 CONFIGFILES = options.c time_support_common.c
-endif
-
-
 
 libhelper_la_SOURCES = \
 	binarybuffer.c \
@@ -20,7 +14,8 @@ libhelper_la_SOURCES = \
 	time_support.c \
 	replacements.c \
 	fileio.c \
-	util.c
+	util.c \
+	jim-nvp.c
 
 if IOUTIL
 libhelper_la_SOURCES += ioutil.c
@@ -38,6 +33,7 @@ noinst_HEADERS = \
 	binarybuffer.h \
 	configuration.h \
 	ioutil.h \
+	list.h \
 	util.h \
 	types.h \
 	log.h \
@@ -46,7 +42,8 @@ noinst_HEADERS = \
 	replacements.h \
 	fileio.h \
 	system.h \
-	bin2char.c
+	bin2char.c \
+	jim-nvp.h
 
 EXTRA_DIST = startup.tcl
 
