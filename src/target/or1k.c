@@ -156,7 +156,7 @@ static int or1k_read_core_reg(struct target *target, int num)
 	struct or1k_common *or1k = target_to_or1k(target);
 
 	if ((num < 0) || (num >= OR1KNUMCOREREGS))
-		return ERROR_INVALID_ARGUMENTS;
+		return ERROR_COMMAND_SYNTAX_ERROR;
 
 	reg_value = or1k->core_regs[num];
 	buf_set_u32(or1k->core_cache->reg_list[num].value, 0, 32, reg_value);
@@ -175,7 +175,7 @@ static int or1k_write_core_reg(struct target *target, int num)
 	struct or1k_common *or1k = target_to_or1k(target);
 
 	if ((num < 0) || (num >= OR1KNUMCOREREGS))
-		return ERROR_INVALID_ARGUMENTS;
+		return ERROR_COMMAND_SYNTAX_ERROR;
 
 	reg_value = buf_get_u32(or1k->core_cache->reg_list[num].value, 0, 32);
 	or1k->core_regs[num] = reg_value;
@@ -782,7 +782,7 @@ static int or1k_read_memory(struct target *target, uint32_t address,
 	/* sanitize arguments */
 	if (((size != 4) && (size != 2) && (size != 1)) || (count == 0) || 
 	    !(buffer))
-		return ERROR_INVALID_ARGUMENTS;
+		return ERROR_COMMAND_SYNTAX_ERROR;
 
 	if (((size == 4) && (address & 0x3u)) || ((size == 2) && 
 						  (address & 0x1u)))
@@ -832,7 +832,7 @@ static int or1k_write_memory(struct target *target, uint32_t address,
 	/* sanitize arguments */
 	if (((size != 4) && (size != 2) && (size != 1)) || (count == 0) || 
 	    !(buffer))
-		return ERROR_INVALID_ARGUMENTS;
+		return ERROR_COMMAND_SYNTAX_ERROR;
 
 	if (((size == 4) && (address & 0x3u)) || ((size == 2) && 
 						  (address & 0x1u)))
