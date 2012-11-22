@@ -3125,6 +3125,13 @@ static void orsoc_jtag_blink(void)
 	buffer_write(high_direction);
 }
 
+static void flyswatter_jtag_blink(unsigned char led)
+{
+	buffer_write(0x82);
+	buffer_write(high_output ^ led);
+	buffer_write(high_direction);
+}
+
 static void flyswatter1_jtag_blink(void)
 {
 	/*
