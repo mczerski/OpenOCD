@@ -111,6 +111,9 @@
 #define BURST_READ_READY		1
 #define MAX_BUS_ERRORS			2
 
+#define STATUS_BITS			1
+#define CRC_LEN				4
+
 static int or1k_jtag_inited = 0;
 static int or1k_jtag_module_selected = -1;
 
@@ -135,6 +138,22 @@ uint32_t adbg_compute_crc(uint32_t crc_in, uint32_t data_in, int length_bits)
 	}
 
 	return crc_out;
+}
+
+int find_status_bit(void *_buf, int len)
+{
+	int i = 0;
+	int count = 0;
+	uint8_t *buf = _buf;
+
+	while (!(buf[i] & (1 << count++))) {
+		if (count == 8) {
+			count = 0;
+			i++;
+		}
+	}
+
+	return ((i * 8) + count);
 }
 
 int or1k_jtag_init(struct or1k_jtag *jtag_info)
@@ -460,6 +479,7 @@ int adbg_wb_burst_read(struct or1k_jtag *jtag_info, int word_size_bytes,
 	uint8_t *in_buffer;
 	uint32_t err_data[2] = {0, 0};
 	uint32_t addr;
+	int shift;
 
 	tap = jtag_info->tap;
 	if (tap == NULL)
@@ -513,7 +533,7 @@ retry_read_full:
 	 */
 
 	/* Calculate transfer params */
-	total_size_bytes = (word_count * word_size_bytes) + 4;
+	total_size_bytes = (word_count * word_size_bytes) + CRC_LEN + STATUS_BITS;
 	total_size_32 = total_size_bytes / 4;
 	spare_bytes = total_size_bytes % 4;
 
@@ -534,11 +554,13 @@ retry_read_full:
 	 * usb_blaster driver to get this behavior.
 	 */
 
+#if USE_POLLING_METHOD
 	while (!(status & BURST_READ_READY) && retry < MAX_READ_STATUS_WAIT) {
 		jtag_add_dr_scan(tap, 1, &field[0], TAP_DRSHIFT);
 		jtag_execute_queue();
 		retry++;
 	}
+#endif
 
 	if (retry == MAX_READ_STATUS_WAIT) {
 		LOG_DEBUG("Burst read timed out\n");
@@ -572,9 +594,21 @@ retry_read_full:
 	jtag_execute_queue();
 
 	free(field);
+	shift = find_status_bit(in_buffer, 2);
+
+	/* We expect the status bit to be in the first byte */
+	if (shift > 8) {
+		LOG_DEBUG("Burst read timed out\n");
+		if (retry_full_busy++ < MAX_READ_BUSY_RETRY)
+			goto retry_read_full;
+		else
+			return ERROR_FAIL;
+	}
+
+	buffer_shr(in_buffer, (word_count * word_size_bytes) + CRC_LEN, shift);
 
 	memcpy(data, in_buffer, word_count * word_size_bytes);
-	memcpy(&crc_read, &in_buffer[word_count * word_size_bytes], 4);
+	memcpy(&crc_read, &in_buffer[word_count * word_size_bytes], CRC_LEN);
 
 	LOG_DEBUG("CRC read = 0x%08X", crc_read);
 
