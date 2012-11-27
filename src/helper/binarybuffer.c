@@ -370,3 +370,19 @@ void bit_copy_discard(struct bit_copy_queue *q)
 		free(qe);
 	}
 }
+
+void buffer_shr(void *_buf, unsigned buf_len, unsigned count)
+{
+	unsigned i;
+	uint8_t *buf = _buf;
+
+	for (i = 0; i < (buf_len - 1); i++) {
+		/*printf("-- buf[i] = %02X\n", buf[i]);
+		printf("-- buf[i] >> count = %02X\n", buf[i] >> count);
+		printf("-- (buf[i+1] << (8 - count) = %02X\n\n", ((buf[i+1] << (8 - count)) & 0xff));*/
+
+		buf[i] = (buf[i] >> count) | ((buf[i+1] << (8 - count)) & 0xff);
+	}
+
+	buf[(buf_len - 1)] = buf[(buf_len - 1)] >> count;
+}
