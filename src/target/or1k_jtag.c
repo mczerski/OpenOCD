@@ -1256,6 +1256,7 @@ int or1k_jtag_write_cpu_cr(struct or1k_jtag *jtag_info,
 int or1k_jtag_read_memory32(struct or1k_jtag *jtag_info, 
 			    uint32_t addr, int count, uint32_t *buffer)
 {
+	int i;
 	if (!or1k_jtag_inited)
 		or1k_jtag_init(jtag_info);
 
@@ -1263,19 +1264,23 @@ int or1k_jtag_read_memory32(struct or1k_jtag *jtag_info,
 		or1k_jtag_mohor_debug_select_module(jtag_info, 
 						    OR1K_MOHORDBGIF_MODULE_WB);
 
-	/* Set command register to read a single word */
-	if (or1k_jtag_mohor_debug_set_command(jtag_info, 
+	/* transfers of size>1 !working currently. >:(
+	   so loop through count data words and read one at a time*/
+	for (i=0; i<count; i++) {
+		/* Set command register to read a single word */
+		if (or1k_jtag_mohor_debug_set_command(jtag_info,
 					      OR1K_MOHORDBGIF_WB_ACC_READ32,
-					      addr,
-					      count*4) != ERROR_OK)
-		return ERROR_FAIL;
+					      addr+4*i,
+					      4) != ERROR_OK)
+			return ERROR_FAIL;
 
-	if (or1k_jtag_mohor_debug_read_go(jtag_info, 4, count,(uint8_t *)buffer)
-	    != ERROR_OK)
-		return ERROR_FAIL;
+		if (or1k_jtag_mohor_debug_read_go(jtag_info, 4, 1,(uint8_t *)&buffer[i])
+				!= ERROR_OK)
+			return ERROR_FAIL;
+
+	}
 
 	return ERROR_OK;
-
 }
 
 int or1k_jtag_read_memory16(struct or1k_jtag *jtag_info, 
