@@ -556,7 +556,7 @@ int adbg_wb_burst_read(struct or1k_jtag *jtag_info, int word_size_bytes,
 			int word_count, unsigned long start_address, void *data)
 {
 	struct jtag_tap *tap;
-	struct scan_field field[100];/* We assume no more than 3200 databits */
+	struct scan_field * field;
 	int i = 0;
 	int retry = 0;
 	int total_size_bytes;
@@ -625,6 +625,14 @@ retry_read_full:
 	 * and the debug unit waits for a '1' status bit before beginning to read data.
 	 */
 
+	/* Calculate transfer params */
+	total_size_bytes = (word_count * word_size_bytes) + 4;
+	total_size_32 = total_size_bytes / 4;
+	spare_bytes = total_size_bytes % 4;
+
+	/* Allocate correct number of scan fields */
+	field = malloc((total_size_32+1)*sizeof(*field));
+
 	/* Get 1 status bit, then word_size_bytes*8 bits */
 	status = 0;
 
@@ -649,13 +657,11 @@ retry_read_full:
 		LOG_DEBUG("Burst read timed out\n");
 		if (retry_full_busy++ < MAX_READ_BUSY_RETRY)
 			goto retry_read_full;
-		else
+		else {
+			free(field);
 			return ERROR_FAIL;
+		}
 	}
-
-	total_size_bytes = (word_count * word_size_bytes) + 4;
-	total_size_32 = total_size_bytes / 4;
-	spare_bytes = total_size_bytes % 4;
 
 	in_buffer = malloc(total_size_bytes);
 
@@ -677,6 +683,8 @@ retry_read_full:
 	jtag_add_dr_scan(tap, nb_fields, field, TAP_IDLE);
 
 	jtag_execute_queue();
+
+	free(field);
 
 	memcpy(data, in_buffer, word_count * word_size_bytes);
 	memcpy(&crc_read, &in_buffer[word_count * word_size_bytes], 4);
@@ -736,7 +744,7 @@ retry_read_full:
 int adbg_wb_burst_write(struct or1k_jtag *jtag_info, const void *data, int word_size_bytes,
 			int word_count, unsigned long start_address)
 {
-	struct scan_field field[100]; /* We assume no more than 3200 databits */
+	struct scan_field * field;
 	struct jtag_tap *tap;
 	int i = 0;
 	int word_size_bits;
@@ -803,6 +811,14 @@ retry_full_write:
 	if (adbg_burst_command(jtag_info, opcode, start_address, word_count) != ERROR_OK)
 		return ERROR_FAIL;
 
+	/* Calculate transfer params */
+	total_size_bytes = (word_count * word_size_bytes) + 4;
+	total_size_32 = total_size_bytes / 4;
+	spare_bytes = total_size_bytes % 4;
+
+	/* Allocate correct number of scan fields */
+	field = malloc((word_count+1)*sizeof(struct scan_field));
+
 	/* Write a start bit so it knows when to start counting */
 	value = 1;
 	field[0].num_bits = 1;
@@ -822,10 +838,6 @@ retry_full_write:
 
 		crc_calc = adbg_compute_crc(crc_calc, datawords, word_size_bits);
 	}
-
-	total_size_bytes = (word_count * word_size_bytes) + 4;
-	total_size_32 = total_size_bytes / 4;
-	spare_bytes = total_size_bytes % 4;
 
 	out_buffer = malloc(total_size_bytes);
 
@@ -858,6 +870,8 @@ retry_full_write:
 	jtag_add_dr_scan(tap, 1, &field[0], TAP_IDLE);
 
 	jtag_execute_queue();
+
+	free(field);
 
 	if (!value) {
 		LOG_DEBUG("CRC ERROR! match bit after write is %i (computed CRC 0x%x)", value, crc_calc);

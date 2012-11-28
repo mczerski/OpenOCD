@@ -699,8 +699,7 @@ static int or1k_bulk_write_memory(struct target *target, uint32_t address,
 	uint32_t block_count_address = address;
 	uint8_t *block_count_buffer = (uint8_t*) buffer;
 
-	const unsigned int blocks_per_round = 64; /* Looks like this is max 
-						     with libftdi driver */
+	const unsigned int blocks_per_round = 1024; /* some reasonable value */
 	unsigned int blocks_this_round;
 
 	while (block_count_left)
