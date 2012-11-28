@@ -909,6 +909,13 @@ int or1k_get_gdb_reg_list(struct target *target, struct reg **reg_list[],
 
 }
 
+static int or1k_checksum_memory(struct target *target, uint32_t address,
+		uint32_t count, uint32_t *checksum) {
+
+	return ERROR_FAIL;
+
+}
+
 /* defined in server/gdb_server.h" */
 extern struct connection *current_rsp_connection;
 extern int gdb_rsp_resp_error;
@@ -1156,7 +1163,7 @@ struct target_type or1k_target =
 	.read_memory = or1k_read_memory,
 	.write_memory = or1k_write_memory,
 	.bulk_write_memory = or1k_bulk_write_memory,
-	// .checksum_memory = or1k_checksum_memory,
+	.checksum_memory = or1k_checksum_memory,
 	// .blank_check_memory = or1k_blank_check_memory,
 
 	// .run_algorithm = or1k_run_algorithm,
