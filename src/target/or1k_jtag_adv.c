@@ -1073,39 +1073,42 @@ int or1k_jtag_write_memory8(struct or1k_jtag *jtag_info,
 
 int or1k_jtag_read_regs(struct or1k_jtag *jtag_info, uint32_t *regs)
 {
-	int i;
+	or1k_jtag_read_cpu(jtag_info,
+			or1k_core_reg_list_arch_info[OR1K_REG_R0].spr_num, OR1K_REG_R31+1,
+			regs+OR1K_REG_R0);
 
-	/* read core registers */
-	for (i = 0; i < OR1KNUMCOREREGS ; i++)
-	{
-		or1k_jtag_read_cpu(jtag_info,
-				   /* or1k spr address is in second field of
-				      or1k_core_reg_list_arch_info
-				   */
-				   or1k_core_reg_list_arch_info[i].spr_num, 1,
-				   regs + i);
+	or1k_jtag_read_cpu(jtag_info,
+			or1k_core_reg_list_arch_info[OR1K_REG_PPC].spr_num, 1,
+			regs+OR1K_REG_PPC);
 
-		LOG_DEBUG("Read cache reg %d: 0x%08x",i,regs[i]);
-	}
+	or1k_jtag_read_cpu(jtag_info,
+			or1k_core_reg_list_arch_info[OR1K_REG_NPC].spr_num, 1,
+			regs+OR1K_REG_NPC);
+
+	or1k_jtag_read_cpu(jtag_info,
+			or1k_core_reg_list_arch_info[OR1K_REG_SR].spr_num, 1,
+			regs+OR1K_REG_SR);
 
 	return ERROR_OK;
 }
 
 int or1k_jtag_write_regs(struct or1k_jtag *jtag_info, uint32_t *regs)
 {
-	int i;
+	or1k_jtag_write_cpu(jtag_info,
+			or1k_core_reg_list_arch_info[OR1K_REG_R0].spr_num, OR1K_REG_R31+1,
+			&regs[OR1K_REG_R0]);
 
-	for (i = 0; i < OR1KNUMCOREREGS; i++)
-	{
-		LOG_DEBUG("Write cache reg %d: 0x%08x",i,regs[i]);
+	or1k_jtag_write_cpu(jtag_info,
+			or1k_core_reg_list_arch_info[OR1K_REG_PPC].spr_num, 1,
+			&regs[OR1K_REG_PPC]);
 
-		or1k_jtag_write_cpu(jtag_info,
-				    /* or1k spr address is in second field of
-				       or1k_core_reg_list_arch_info
-				    */
-				    or1k_core_reg_list_arch_info[i].spr_num, 1,
-				    &regs[i]);
-	}
+	or1k_jtag_write_cpu(jtag_info,
+			or1k_core_reg_list_arch_info[OR1K_REG_NPC].spr_num, 1,
+			&regs[OR1K_REG_NPC]);
+
+	or1k_jtag_write_cpu(jtag_info,
+			or1k_core_reg_list_arch_info[OR1K_REG_SR].spr_num, 1,
+			&regs[OR1K_REG_SR]);
 
 	return ERROR_OK;
 }
