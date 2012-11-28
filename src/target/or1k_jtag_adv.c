@@ -733,7 +733,7 @@ retry_read_full:
 }
 
 /* Set up and execute a burst write to a contiguous set of addresses */
-int adbg_wb_burst_write(struct or1k_jtag *jtag_info, void *data, int word_size_bytes,
+int adbg_wb_burst_write(struct or1k_jtag *jtag_info, const void *data, int word_size_bytes,
 			int word_count, unsigned long start_address)
 {
 	struct scan_field field[100]; /* We assume no more than 3200 databits */
@@ -814,11 +814,11 @@ retry_full_write:
 	crc_calc = 0xffffffff;
 	for (i = 0; i < word_count; i++) {
 		if (word_size_bytes == 4)
-			datawords = ((uint32_t *)data)[i];
+			datawords = ((const uint32_t *)data)[i];
 		else if (word_size_bytes == 2)
-			datawords = ((uint16_t *)data)[i];
+			datawords = ((const uint16_t *)data)[i];
 		else
-			datawords = ((uint8_t *)data)[i];
+			datawords = ((const uint8_t *)data)[i];
 
 		crc_calc = adbg_compute_crc(crc_calc, datawords, word_size_bits);
 	}
@@ -910,7 +910,7 @@ int or1k_jtag_read_cpu(struct or1k_jtag *jtag_info,
 		or1k_jtag_init(jtag_info);
 
 	adbg_select_module(jtag_info,DC_CPU0);
-	adbg_wb_burst_read(jtag_info, 4, count, addr, (void *)value);
+	adbg_wb_burst_read(jtag_info, 4, count, addr, value);
 
 	return ERROR_OK;
 }
@@ -923,7 +923,7 @@ int or1k_jtag_write_cpu(struct or1k_jtag *jtag_info,
 		or1k_jtag_init(jtag_info);
 
 	adbg_select_module(jtag_info, DC_CPU0);
-	adbg_wb_burst_write(jtag_info, (void *)value, 4, count, addr);
+	adbg_wb_burst_write(jtag_info, value, 4, count, addr);
 
 	return ERROR_OK;
 }
@@ -1037,7 +1037,7 @@ int or1k_jtag_write_memory32(struct or1k_jtag *jtag_info,
 		or1k_jtag_init(jtag_info);
 
 	adbg_select_module(jtag_info,DC_WISHBONE);
-	adbg_wb_burst_write(jtag_info, (void *)buffer, 4, count, addr);
+	adbg_wb_burst_write(jtag_info, buffer, 4, count, addr);
 
 	return ERROR_OK;
 
@@ -1052,7 +1052,7 @@ int or1k_jtag_write_memory16(struct or1k_jtag *jtag_info,
 		or1k_jtag_init(jtag_info);
 
 	adbg_select_module(jtag_info,DC_WISHBONE);
-	adbg_wb_burst_write(jtag_info, (void *)buffer, 2, count, addr);
+	adbg_wb_burst_write(jtag_info, buffer, 2, count, addr);
 
 	return ERROR_OK;
 }
@@ -1066,7 +1066,7 @@ int or1k_jtag_write_memory8(struct or1k_jtag *jtag_info,
 		or1k_jtag_init(jtag_info);
 
 	adbg_select_module(jtag_info,DC_WISHBONE);
-	adbg_wb_burst_write(jtag_info, (void *)buffer, 1, count, addr);
+	adbg_wb_burst_write(jtag_info, buffer, 1, count, addr);
 
 	return ERROR_OK;
 }
