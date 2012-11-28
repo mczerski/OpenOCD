@@ -474,17 +474,8 @@ static int or1k_resume_or_step(struct target *target, int current,
 			    32, address);
 	}
 
-	resume_pc = buf_get_u32(or1k->core_cache->reg_list[OR1K_REG_NPC].value,
-				0, 32);
 	if (!step) {
 		or1k_restore_context(target);
-
-		/* Last, write the NPC, again */
-		or1k_jtag_write_cpu(&or1k->jtag,
-				/* NPC's address */
-				or1k_core_reg_list_arch_info[OR1K_REG_NPC].spr_num, 1,
-				/* What it should be set to */
-				&resume_pc);
 	}
 
 	uint32_t debug_reg_list[OR1K_DEBUG_REG_NUM];
@@ -510,6 +501,8 @@ static int or1k_resume_or_step(struct target *target, int current,
 	/* write debug registers (starting from DMR1 register) */
 	or1k_jtag_write_cpu(&or1k->jtag, OR1K_DMR1_CPU_REG_ADD, OR1K_DEBUG_REG_NUM, debug_reg_list);
 
+	resume_pc = buf_get_u32(or1k->core_cache->reg_list[OR1K_REG_NPC].value,
+				0, 32);
 	/* the front-end may request us not to handle breakpoints */
 	if (handle_breakpoints)
 	{
