@@ -703,7 +703,7 @@ static int or1k_bulk_read_memory(struct target *target, uint32_t address,
 	uint32_t block_count_address = address;
 	uint8_t *block_count_buffer = (uint8_t*) buffer;
 
-	const unsigned int blocks_per_round = 1; /* >1 !working currently. >:(*/
+	const unsigned int blocks_per_round = 1024; /* some resonable value */
 	unsigned int blocks_this_round;
 
 	while (block_count_left)
