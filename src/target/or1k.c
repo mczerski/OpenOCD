@@ -89,30 +89,22 @@ int or1k_save_context(struct target *target)
 {
 
 	LOG_DEBUG(" - ");
-	int retval, i;
+	int retval, i, regs_read = 0;
 	struct or1k_common *or1k = target_to_or1k(target);
-
-	/*
-	retval = or1k_jtag_read_regs(&or1k->jtag, or1k->core_regs);
-	if (retval != ERROR_OK)
-		return retval;
-	*/
 	
 	for (i = 0; i < OR1KNUMCOREREGS; i++)
 	{
-		if (!or1k->core_cache->reg_list[i].valid)
+		if (!regs_read && !or1k->core_cache->reg_list[i].valid)
 		{
-			retval = or1k_jtag_read_cpu(&or1k->jtag, 
-				   /* or1k spr address is in second field of
-				      or1k_core_reg_list_arch_info
-				   */
-				   or1k_core_reg_list_arch_info[i].spr_num,
-				   &or1k->core_regs[i]);
-			
-
+			/* read all registers at once (but only one time in this loop) */
+			retval = or1k_jtag_read_regs(&or1k->jtag, or1k->core_regs);
 			if (retval != ERROR_OK)
 				return retval;
 			
+			/* prevent next reads in this loop */
+			regs_read = 1;
+		}
+		if (!or1k->core_cache->reg_list[i].valid) {
 			/* We've just updated the core_reg[i], now update
 			   the core cache */
 			or1k_read_core_reg(target, i);
