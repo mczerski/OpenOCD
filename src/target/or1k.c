@@ -542,16 +542,6 @@ static int or1k_resume_or_step(struct target *target, int current,
 		target_call_event_callbacks(target, TARGET_EVENT_DEBUG_RESUMED);
 		LOG_DEBUG("target debug resumed at 0x%" PRIx32 "", resume_pc);
 	}
-
-	if (step)
-	{
-
-		/* Step should have occurred. */
-		if ((retval = or1k_debug_entry(target)) != ERROR_OK)
-			return retval;
-		
-		target_call_event_callbacks(target, TARGET_EVENT_HALTED);
-	}
 	
 	return ERROR_OK;
 }
@@ -571,10 +561,9 @@ static int or1k_step(struct target *target, int current,
 {
 	return or1k_resume_or_step(target, current, address, 
 				   handle_breakpoints, 
-				   /* TARGET_EVENT_DEBUG_RESUMED:
-				      target resumed to execute on behalf of 
-				      the debugger */
-				   1, 
+				   /* TARGET_EVENT_RESUMED:
+				      target resumed to execute user code */
+				   0,
 				   /* Single step? Yes. */
 				   1);
 	
