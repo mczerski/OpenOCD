@@ -901,9 +901,9 @@ int or1k_jtag_mohor_debug_write_go(struct or1k_jtag *jtag_info,
 
 /* Currently hard set in functions to 32-bits */
 int or1k_jtag_read_cpu(struct or1k_jtag *jtag_info,
-		       uint32_t addr, uint32_t *value)
+		uint32_t addr, int count, uint32_t *value)
 {
-  
+	int i;
 	if (!or1k_jtag_inited)
 		or1k_jtag_init(jtag_info);
 
@@ -911,27 +911,29 @@ int or1k_jtag_read_cpu(struct or1k_jtag *jtag_info,
 		or1k_jtag_mohor_debug_select_module(jtag_info, 
 						    OR1K_MOHORDBGIF_MODULE_CPU0);
 
-	/* Set command register to read a single word */
-	if (or1k_jtag_mohor_debug_set_command(jtag_info, 
-					      OR1K_MOHORDBGIF_CPU_ACC_READ,
-					      addr,
-					      4) != ERROR_OK)
-		return ERROR_FAIL;
+	for (i=0; i<count; i++) {
+		/* Set command register to read a single word */
+		if (or1k_jtag_mohor_debug_set_command(jtag_info,
+				OR1K_MOHORDBGIF_CPU_ACC_READ,
+				addr+i,
+				4) != ERROR_OK)
+			return ERROR_FAIL;
 
-	if (or1k_jtag_mohor_debug_read_go(jtag_info, 4, 1,(uint8_t *)value) !=
-	    ERROR_OK)
-		return ERROR_FAIL;
+		if (or1k_jtag_mohor_debug_read_go(jtag_info, 4, 1,(uint8_t *)value) !=
+				ERROR_OK)
+			return ERROR_FAIL;
 
-	h_u32_to_be((uint8_t*)value, *value);
+		h_u32_to_be((uint8_t*)&value[i], value[i]);
+
+	}
 
 	return ERROR_OK;
 }
 
 int or1k_jtag_write_cpu(struct or1k_jtag *jtag_info,
-			uint32_t addr, uint32_t value)
+		uint32_t addr, int count, const uint32_t * value)
 {
-	LOG_DEBUG(" writing CPU reg 0x%x = 0x%x", addr, value);
-
+	int i;
 	if (!or1k_jtag_inited)
 		or1k_jtag_init(jtag_info);
 
@@ -940,17 +942,20 @@ int or1k_jtag_write_cpu(struct or1k_jtag *jtag_info,
 						    OR1K_MOHORDBGIF_MODULE_CPU0
 			);
 
-	/* Set command register to write a single word */
-	or1k_jtag_mohor_debug_set_command(jtag_info, 
-					  OR1K_MOHORDBGIF_CPU_ACC_WRITE,
-					  addr,
-					  4);
+	for (i=0; i<count; i++) {
+		/* Set command register to write a single word */
+		or1k_jtag_mohor_debug_set_command(jtag_info,
+				OR1K_MOHORDBGIF_CPU_ACC_WRITE,
+				addr+i,
+				4);
 
+		uint32_t value_be;
+		h_u32_to_be((uint8_t*)&value_be, value[i]);
 
-	h_u32_to_be((uint8_t*)&value, value);
-	if (or1k_jtag_mohor_debug_write_go(jtag_info, 4, 1,
-					   (uint8_t *)&value) != ERROR_OK)
-		return ERROR_FAIL;
+		if (or1k_jtag_mohor_debug_write_go(jtag_info, 4, 1,
+				(uint8_t *)&value_be) != ERROR_OK)
+			return ERROR_FAIL;
+	}
 
 	return ERROR_OK;
 
@@ -1380,7 +1385,7 @@ int or1k_jtag_read_regs(struct or1k_jtag *jtag_info, uint32_t *regs)
 				   /* or1k spr address is in second field of
 				      or1k_core_reg_list_arch_info
 				   */
-				   or1k_core_reg_list_arch_info[i].spr_num,
+				   or1k_core_reg_list_arch_info[i].spr_num, 1,
 				   regs + i);
 		LOG_DEBUG("read cache reg %d: 0x%08x",i,regs[i]);
 	}
@@ -1401,8 +1406,8 @@ int or1k_jtag_write_regs(struct or1k_jtag *jtag_info, uint32_t *regs)
 				    /* or1k spr address is in second field of
 				       or1k_core_reg_list_arch_info
 				    */
-				    or1k_core_reg_list_arch_info[i].spr_num,
-				    regs[i]);
+				    or1k_core_reg_list_arch_info[i].spr_num, 1,
+				    &regs[i]);
 	}
 
 	return ERROR_OK;

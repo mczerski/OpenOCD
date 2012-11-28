@@ -903,27 +903,27 @@ retry_full_write:
 
 /* Currently hard set in functions to 32-bits */
 int or1k_jtag_read_cpu(struct or1k_jtag *jtag_info,
-		       uint32_t addr, uint32_t *value)
+		uint32_t addr, int count, uint32_t *value)
 {
 
 	if (!or1k_jtag_inited)
 		or1k_jtag_init(jtag_info);
 
 	adbg_select_module(jtag_info,DC_CPU0);
-	adbg_wb_burst_read(jtag_info, 4, 1, addr, (void *)value);
+	adbg_wb_burst_read(jtag_info, 4, count, addr, (void *)value);
 
 	return ERROR_OK;
 }
 
 int or1k_jtag_write_cpu(struct or1k_jtag *jtag_info,
-			uint32_t addr, uint32_t value)
+		uint32_t addr, int count, const uint32_t * value)
 {
 
 	if (!or1k_jtag_inited)
 		or1k_jtag_init(jtag_info);
 
 	adbg_select_module(jtag_info, DC_CPU0);
-	adbg_wb_burst_write(jtag_info, &value, 4, 1, addr);
+	adbg_wb_burst_write(jtag_info, (void *)value, 4, count, addr);
 
 	return ERROR_OK;
 }
@@ -1082,7 +1082,7 @@ int or1k_jtag_read_regs(struct or1k_jtag *jtag_info, uint32_t *regs)
 				   /* or1k spr address is in second field of
 				      or1k_core_reg_list_arch_info
 				   */
-				   or1k_core_reg_list_arch_info[i].spr_num,
+				   or1k_core_reg_list_arch_info[i].spr_num, 1,
 				   regs + i);
 
 		LOG_DEBUG("Read cache reg %d: 0x%08x",i,regs[i]);
@@ -1103,8 +1103,8 @@ int or1k_jtag_write_regs(struct or1k_jtag *jtag_info, uint32_t *regs)
 				    /* or1k spr address is in second field of
 				       or1k_core_reg_list_arch_info
 				    */
-				    or1k_core_reg_list_arch_info[i].spr_num,
-				    regs[i]);
+				    or1k_core_reg_list_arch_info[i].spr_num, 1,
+				    &regs[i]);
 	}
 
 	return ERROR_OK;

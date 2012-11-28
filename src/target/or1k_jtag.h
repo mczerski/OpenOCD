@@ -85,9 +85,9 @@ int or1k_jtag_init(struct or1k_jtag *jtag_info);
 
 /* Currently hard set in functions to 32-bits */
 int or1k_jtag_read_cpu(struct or1k_jtag *jtag_info,
-		uint32_t addr, uint32_t *value);
+		uint32_t addr, int count, uint32_t *value);
 int or1k_jtag_write_cpu(struct or1k_jtag *jtag_info,
-		uint32_t addr, uint32_t value);
+		uint32_t addr, int count, const uint32_t * value);
 
 int or1k_jtag_read_cpu_cr(struct or1k_jtag *jtag_info,
 		uint32_t *value);

@@ -482,35 +482,35 @@ static int or1k_resume_or_step(struct target *target, int current,
 		/* Last, write the NPC, again */
 		or1k_jtag_write_cpu(&or1k->jtag,
 				/* NPC's address */
-				or1k_core_reg_list_arch_info[OR1K_REG_NPC].spr_num,
+				or1k_core_reg_list_arch_info[OR1K_REG_NPC].spr_num, 1,
 				/* What it should be set to */
-				resume_pc);
+				&resume_pc);
 	}
 
 	uint32_t regval;
 	regval = 0;
 	/* Clear Debug Reason Register (DRR) */
-	or1k_jtag_write_cpu(&or1k->jtag, OR1K_DRR_CPU_REG_ADD, regval);
+	or1k_jtag_write_cpu(&or1k->jtag, OR1K_DRR_CPU_REG_ADD, 1, &regval);
 	/* Clear watchpoint break generation in Debug Mode Register 2 (DMR2) */
-	or1k_jtag_read_cpu(&or1k->jtag, OR1K_DMR2_CPU_REG_ADD, &regval);
+	or1k_jtag_read_cpu(&or1k->jtag, OR1K_DMR2_CPU_REG_ADD, 1, &regval);
 	regval &= ~OR1K_DMR2_WGB;
-	or1k_jtag_write_cpu(&or1k->jtag, OR1K_DMR2_CPU_REG_ADD, regval);
+	or1k_jtag_write_cpu(&or1k->jtag, OR1K_DMR2_CPU_REG_ADD, 1, &regval);
 	/* Clear the single step trigger in Debug Mode Register 1 (DMR1) */
-	or1k_jtag_read_cpu(&or1k->jtag, OR1K_DMR1_CPU_REG_ADD, &regval);
+	or1k_jtag_read_cpu(&or1k->jtag, OR1K_DMR1_CPU_REG_ADD, 1, &regval);
 	if (step)
 		regval |= OR1K_DMR1_ST | OR1K_DMR1_BT;
 	else
 		regval &= ~(OR1K_DMR1_ST | OR1K_DMR1_BT);
 
-	or1k_jtag_write_cpu(&or1k->jtag, OR1K_DMR1_CPU_REG_ADD, regval);
+	or1k_jtag_write_cpu(&or1k->jtag, OR1K_DMR1_CPU_REG_ADD, 1, &regval);
 	/* Set traps to be handled by the debug unit in the Debug Stop 
 	   Register (DSR) */
-	or1k_jtag_read_cpu(&or1k->jtag, OR1K_DSR_CPU_REG_ADD, &regval);
+	or1k_jtag_read_cpu(&or1k->jtag, OR1K_DSR_CPU_REG_ADD, 1, &regval);
 	/* TODO - check if we have any software breakpoints in place before
 	   setting this value - the kernel, for instance, relies on l.trap
 	   instructions not stalling the processor! */
 	regval |= OR1K_DSR_TE;
-	or1k_jtag_write_cpu(&or1k->jtag, OR1K_DSR_CPU_REG_ADD, regval);
+	or1k_jtag_write_cpu(&or1k->jtag, OR1K_DSR_CPU_REG_ADD, 1, &regval);
 	 
 	/* the front-end may request us not to handle breakpoints */
 	if (handle_breakpoints)
@@ -619,7 +619,7 @@ static int or1k_add_breakpoint(struct target *target,
 
 	/* invalidate instruction cache */
 	or1k_jtag_write_cpu(&or1k->jtag,
-			OR1K_ICBIR_CPU_REG_ADD, breakpoint->address);
+			OR1K_ICBIR_CPU_REG_ADD, 1, &breakpoint->address);
 
 	return ERROR_OK;
 }
@@ -645,7 +645,7 @@ static int or1k_remove_breakpoint(struct target *target,
 
 	/* invalidate instruction cache */
 	or1k_jtag_write_cpu(&or1k->jtag,
-			OR1K_ICBIR_CPU_REG_ADD, breakpoint->address);
+			OR1K_ICBIR_CPU_REG_ADD, 1, &breakpoint->address);
 
 	return ERROR_OK;
 }
@@ -977,7 +977,7 @@ COMMAND_HANDLER(or1k_readspr_command_handler)
 			}
 #else
 			/* Now get the register value via JTAG */
-			retval = or1k_jtag_read_cpu(&or1k->jtag, regnum, &regval);
+			retval = or1k_jtag_read_cpu(&or1k->jtag, regnum, 1, &regval);
 			if (retval != ERROR_OK)
 				return retval;
 		
@@ -992,7 +992,7 @@ COMMAND_HANDLER(or1k_readspr_command_handler)
 	     !(or1k->core_cache->reg_list[reg_cache_index].valid == 1)))
 	{
 		/* Now get the register value via JTAG */
-		retval = or1k_jtag_read_cpu(&or1k->jtag, regnum, &regval);
+		retval = or1k_jtag_read_cpu(&or1k->jtag, regnum, 1, &regval);
 		
 		if (retval != ERROR_OK)
 			return retval;
@@ -1096,13 +1096,13 @@ COMMAND_HANDLER(or1k_writespr_command_handler)
 	while(1){
 
 	/* Now set the register via JTAG */
-	retval = or1k_jtag_write_cpu(&or1k->jtag, regnum, regval);
+	retval = or1k_jtag_write_cpu(&or1k->jtag, regnum, 1, &regval);
 
 	if (retval != ERROR_OK)
 		return retval;
 
 	/* Now read back the register via JTAG */
-	retval = or1k_jtag_read_cpu(&or1k->jtag, regnum, &verify_regval);
+	retval = or1k_jtag_read_cpu(&or1k->jtag, regnum, 1, &verify_regval);
 
 	if (retval != ERROR_OK)
 		return retval;
@@ -1116,7 +1116,7 @@ COMMAND_HANDLER(or1k_writespr_command_handler)
 #else
 
 	/* Now set the register via JTAG */
-	retval = or1k_jtag_write_cpu(&or1k->jtag, regnum, regval);
+	retval = or1k_jtag_write_cpu(&or1k->jtag, regnum, 1, &regval);
 	
 	if (retval != ERROR_OK)
 		return retval;
