@@ -73,7 +73,14 @@
 #include <time.h>
 
 /* Size of USB endpoint max packet size, ie. 64 bytes */
-#define BUF_LEN 64
+#define MAX_PACKET_SIZE 64
+/*
+ * Size of data buffer that holds bytes in byte-shift mode.
+ * This buffer can hold multiple USB packets aligned to
+ * MAX_PACKET_SIZE bytes boundaries.
+ * BUF_LEN must be grater than or equal MAX_PACKET_SIZE.
+ */
+#define BUF_LEN 4096
 
 #define NO_TAP_SHIFT	0
 #define TAP_SHIFT	1
@@ -231,7 +238,7 @@ static void ublast_reset(int trst, int srst)
  * @abyte: the byte to queue
  *
  * Queues one byte in 'bitbang mode' to the USB Blaster. The byte is not
- * actually sent, but stored in a 64 bytes buffer. The write is performed once
+ * actually sent, but stored in a buffer. The write is performed once
  * the buffer is filled, or if an explicit ublast_flush_buffer() is called.
  */
 static void ublast_queue_byte(uint8_t abyte)
@@ -355,13 +362,11 @@ static void ublast_clock_tdi_flip_tms(int tdi, enum scan_type type)
 /**
  * ublast_queue_bytes - queue bytes for the USB Blaster
  * @bytes: byte array
- * @nb_bytes: number of bytes (limited to 64)
+ * @nb_bytes: number of bytes
  *
- * Queues bytes to be sent to the USB Blaster.
- *
- * As the USB endpoint can only accept 64 bytes, the caller should ensure enough
- * space is available by calling nb_buf_remaining().
- * If the 64 bytes buffer is filled, the write is issued to the USB device.
+ * Queues bytes to be sent to the USB Blaster. The bytes are not
+ * actually sent, but stored in a buffer. The write is performed once
+ * the buffer is filled, or if an explicit ublast_flush_buffer() is called.
  */
 static void ublast_queue_bytes(uint8_t *bytes, int nb_bytes)
 {
@@ -551,7 +556,7 @@ static void ublast_queue_tdi(uint8_t *bits, int nb_bits, enum scan_type scan, in
 {
 	int nb8 = nb_bits / 8;
 	int nb1 = nb_bits % 8;
-	int nbfree, i, trans = 0, read_tdos;
+	int nbfree_in_packet, i, trans = 0, read_tdos;
 	uint8_t *tdos = calloc(1, nb_bits / 8 + 1);
 	static uint8_t byte0[BUF_LEN];
 
@@ -571,8 +576,11 @@ static void ublast_queue_tdi(uint8_t *bits, int nb_bits, enum scan_type scan, in
 
 	read_tdos = (scan == SCAN_IN || scan == SCAN_IO);
 	for (i = 0; i < nb8; i += trans) {
-		nbfree = nb_buf_remaining();
-		trans = MIN(nbfree - 1, nb8 - i);
+		/*
+		 * Calculate number of bytes to fill USB packet of size MAX_PACKET_SIZE
+		 */
+		nbfree_in_packet = (MAX_PACKET_SIZE - (info.bufidx%MAX_PACKET_SIZE));
+		trans = MIN(nbfree_in_packet - 1, nb8 - i);
 
 		/*
 		 * Queue a byte-shift mode transmission, with as many bytes as
@@ -752,8 +760,7 @@ static int ublast_speed(int speed)
  */
 static int ublast_init(void)
 {
-	static uint8_t buf0[BUF_LEN], tms_reset = 0xff;
-	unsigned int retlen;
+	static uint8_t tms_reset = 0xff;
 	int ret, i;
 
 	if (info.lowlevel_name) {
@@ -789,9 +796,8 @@ static int ublast_init(void)
 		/*
 		 * Flush USB-Blaster queue fifos
 		 */
-		for (i = 0; i < 128 / BUF_LEN; i += BUF_LEN)
-			ublast_buf_write(buf0, BUF_LEN, &retlen);
-		retlen = 1;
+		uint32_t retlen;
+		ublast_buf_write(info.buf, BUF_LEN, &retlen);
 		/*
 		 * Put JTAG in RESET state (five 1 on TMS)
 		 */
