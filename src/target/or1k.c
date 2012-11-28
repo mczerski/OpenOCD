@@ -108,9 +108,6 @@ int or1k_save_context(struct target *target)
 				   */
 				   or1k_core_reg_list_arch_info[i].spr_num,
 				   &or1k->core_regs[i]);
-			/* Switch endianness of data just read */
-			h_u32_to_be((uint8_t*) &or1k->core_regs[i], 
-				    or1k->core_regs[i]);
 			
 
 			if (retval != ERROR_OK)
@@ -460,7 +457,7 @@ static int or1k_resume_or_step(struct target *target, int current,
 {
 	struct or1k_common *or1k = target_to_or1k(target);
 	struct breakpoint *breakpoint = NULL;
-	uint32_t resume_pc, resume_pc_be;
+	uint32_t resume_pc;
 	int retval;
 
 	LOG_DEBUG(" - ");
@@ -490,14 +487,12 @@ static int or1k_resume_or_step(struct target *target, int current,
 	if (!step) {
 		or1k_restore_context(target);
 
-		h_u32_to_be((uint8_t*) &resume_pc_be, resume_pc);
-
 		/* Last, write the NPC, again */
 		or1k_jtag_write_cpu(&or1k->jtag,
 				/* NPC's address */
 				or1k_core_reg_list_arch_info[OR1K_REG_NPC].spr_num,
 				/* What it should be set to */
-				resume_pc_be);
+				resume_pc);
 	}
 
 	uint32_t regval;
@@ -506,29 +501,23 @@ static int or1k_resume_or_step(struct target *target, int current,
 	or1k_jtag_write_cpu(&or1k->jtag, OR1K_DRR_CPU_REG_ADD, regval);
 	/* Clear watchpoint break generation in Debug Mode Register 2 (DMR2) */
 	or1k_jtag_read_cpu(&or1k->jtag, OR1K_DMR2_CPU_REG_ADD, &regval);
-	h_u32_to_be((uint8_t*) &regval, regval);
 	regval &= ~OR1K_DMR2_WGB;
-	h_u32_to_be((uint8_t*) &regval, regval);
 	or1k_jtag_write_cpu(&or1k->jtag, OR1K_DMR2_CPU_REG_ADD, regval);
 	/* Clear the single step trigger in Debug Mode Register 1 (DMR1) */
 	or1k_jtag_read_cpu(&or1k->jtag, OR1K_DMR1_CPU_REG_ADD, &regval);
-	h_u32_to_be((uint8_t*) &regval, regval);
 	if (step)
 		regval |= OR1K_DMR1_ST | OR1K_DMR1_BT;
 	else
 		regval &= ~(OR1K_DMR1_ST | OR1K_DMR1_BT);
 
-	h_u32_to_be((uint8_t*) &regval, regval);
 	or1k_jtag_write_cpu(&or1k->jtag, OR1K_DMR1_CPU_REG_ADD, regval);
 	/* Set traps to be handled by the debug unit in the Debug Stop 
 	   Register (DSR) */
 	or1k_jtag_read_cpu(&or1k->jtag, OR1K_DSR_CPU_REG_ADD, &regval);
-	h_u32_to_be((uint8_t*) &regval, regval);
 	/* TODO - check if we have any software breakpoints in place before
 	   setting this value - the kernel, for instance, relies on l.trap
 	   instructions not stalling the processor! */
 	regval |= OR1K_DSR_TE;
-	h_u32_to_be((uint8_t*) &regval, regval);
 	or1k_jtag_write_cpu(&or1k->jtag, OR1K_DSR_CPU_REG_ADD, regval);
 	 
 	/* the front-end may request us not to handle breakpoints */
@@ -637,10 +626,8 @@ static int or1k_add_breakpoint(struct target *target,
 				 (uint32_t*)&or1k_trap_insn);
 
 	/* invalidate instruction cache */
-	uint32_t icbir_val;
-	h_u32_to_be((uint8_t*) &icbir_val, breakpoint->address);
 	or1k_jtag_write_cpu(&or1k->jtag,
-			OR1K_ICBIR_CPU_REG_ADD, icbir_val);
+			OR1K_ICBIR_CPU_REG_ADD, breakpoint->address);
 
 	return ERROR_OK;
 }
@@ -665,10 +652,8 @@ static int or1k_remove_breakpoint(struct target *target,
 				 (uint32_t*)breakpoint->orig_instr);
 
 	/* invalidate instruction cache */
-	uint32_t icbir_val;
-	h_u32_to_be((uint8_t*) &icbir_val, breakpoint->address);
 	or1k_jtag_write_cpu(&or1k->jtag,
-			OR1K_ICBIR_CPU_REG_ADD, icbir_val);
+			OR1K_ICBIR_CPU_REG_ADD, breakpoint->address);
 
 	return ERROR_OK;
 }
@@ -1004,8 +989,6 @@ COMMAND_HANDLER(or1k_readspr_command_handler)
 			if (retval != ERROR_OK)
 				return retval;
 		
-			/* Switch endianness of data just read */
-			h_u32_to_be((uint8_t*) &regval, regval);
 #endif			
 			break;
 		}
@@ -1021,9 +1004,7 @@ COMMAND_HANDLER(or1k_readspr_command_handler)
 		
 		if (retval != ERROR_OK)
 			return retval;
-		
-		/* Switch endianness of data just read */
-		h_u32_to_be((uint8_t*) &regval, regval);
+
 	}
 	
 	
@@ -1077,7 +1058,7 @@ COMMAND_HANDLER(or1k_writespr_command_handler)
 {
 	struct target *target = get_current_target(CMD_CTX);
 	struct or1k_common *or1k = target_to_or1k(target);
-	uint32_t regnum, regval, regval_be;
+	uint32_t regnum, regval;
 	int retval;
 	int i;
 
@@ -1120,13 +1101,10 @@ COMMAND_HANDLER(or1k_writespr_command_handler)
 #if 0
 	uint32_t verify_regval;
 
-	/* Switch endianness of data just read */
-	h_u32_to_be((uint8_t*) &regval_be, regval);
-
 	while(1){
 
 	/* Now set the register via JTAG */
-	retval = or1k_jtag_write_cpu(&or1k->jtag, regnum, regval_be);
+	retval = or1k_jtag_write_cpu(&or1k->jtag, regnum, regval);
 
 	if (retval != ERROR_OK)
 		return retval;
@@ -1139,17 +1117,14 @@ COMMAND_HANDLER(or1k_writespr_command_handler)
 
 	LOG_DEBUG("written: %08x read: %08x",regval_be, verify_regval);
 	
-	if (regval_be == verify_regval)
+	if (regval == verify_regval)
 		break;
 	}
 
 #else
 
-	/* Switch endianness of data just read */
-	h_u32_to_be((uint8_t*) &regval_be, regval);
-
 	/* Now set the register via JTAG */
-	retval = or1k_jtag_write_cpu(&or1k->jtag, regnum, regval_be);
+	retval = or1k_jtag_write_cpu(&or1k->jtag, regnum, regval);
 	
 	if (retval != ERROR_OK)
 		return retval;
