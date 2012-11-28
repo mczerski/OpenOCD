@@ -27,8 +27,6 @@
 struct target;
 
 /* OR1K registers */
-#define OR1KNUMCOREREGS (32 + 3)
-
 enum or1k_reg_nums {
 	OR1K_REG_R0 = 0,
 	OR1K_REG_R1,
@@ -64,7 +62,8 @@ enum or1k_reg_nums {
 	OR1K_REG_R31,
 	OR1K_REG_PPC,
 	OR1K_REG_NPC,
-	OR1K_REG_SR
+	OR1K_REG_SR,
+	OR1KNUMCOREREGS
 };
 
 
@@ -96,11 +95,22 @@ extern struct or1k_core_reg or1k_core_reg_list_arch_info[OR1KNUMCOREREGS];
 /*! ORBIS32 Trap instruction */
 #define OR1K_TRAP_INSTR  0x21000001
 
+enum or1k_debug_reg_nums {
+	OR1K_DEBUG_REG_DMR1 = 0,
+	OR1K_DEBUG_REG_DMR2,
+	OR1K_DEBUG_REG_DCWR0,
+	OR1K_DEBUG_REG_DCWR1,
+	OR1K_DEBUG_REG_DSR,
+	OR1K_DEBUG_REG_DRR,
+	OR1K_DEBUG_REG_NUM
+};
+
 /* OR1K Debug registers and bits needed for resuming */
-#define OR1K_DMR1_CPU_REG_ADD ((6<<11)+16)/* Debug Mode Register 1 0x3010 */
-#define OR1K_DMR2_CPU_REG_ADD ((6<<11)+17)/* Debug Mode Register 2 0x3011 */
-#define OR1K_DSR_CPU_REG_ADD	 ((6<<11)+20)/* Debug Stop Register 0x3014 */
-#define OR1K_DRR_CPU_REG_ADD  ((6<<11)+21)/* Debug Reason Register 0x3015 */
+#define OR1K_DEBUG_REG_BASE (6<<11) /* Debug registers Base address */
+#define OR1K_DMR1_CPU_REG_ADD (OR1K_DEBUG_REG_BASE+16)/* Debug Mode Register 1 0x3010 */
+//#define OR1K_DMR2_CPU_REG_ADD (OR1K_DEBUG_REG_BASE+17)/* Debug Mode Register 2 0x3011 */
+//#define OR1K_DSR_CPU_REG_ADD (OR1K_DEBUG_REG_BASE+20)/* Debug Stop Register 0x3014 */
+//#define OR1K_DRR_CPU_REG_ADD  (OR1K_DEBUG_REG_BASE+21)/* Debug Reason Register 0x3015 */
 #define OR1K_DMR1_ST 	0x00400000	/* Single-step trace */
 #define OR1K_DMR1_BT	0x00800000	/* Branch trace */
 #define OR1K_DMR2_WGB   	0x003ff000	/* Watchpoints generating breakpoint */

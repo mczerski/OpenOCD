@@ -487,31 +487,29 @@ static int or1k_resume_or_step(struct target *target, int current,
 				&resume_pc);
 	}
 
-	uint32_t regval;
-	regval = 0;
+	uint32_t debug_reg_list[OR1K_DEBUG_REG_NUM];
+	/* read debug registers (starting from DMR1 register) */
+	or1k_jtag_read_cpu(&or1k->jtag, OR1K_DMR1_CPU_REG_ADD, OR1K_DEBUG_REG_NUM, debug_reg_list);
 	/* Clear Debug Reason Register (DRR) */
-	or1k_jtag_write_cpu(&or1k->jtag, OR1K_DRR_CPU_REG_ADD, 1, &regval);
+	debug_reg_list[OR1K_DEBUG_REG_DRR] = 0;
 	/* Clear watchpoint break generation in Debug Mode Register 2 (DMR2) */
-	or1k_jtag_read_cpu(&or1k->jtag, OR1K_DMR2_CPU_REG_ADD, 1, &regval);
-	regval &= ~OR1K_DMR2_WGB;
-	or1k_jtag_write_cpu(&or1k->jtag, OR1K_DMR2_CPU_REG_ADD, 1, &regval);
-	/* Clear the single step trigger in Debug Mode Register 1 (DMR1) */
-	or1k_jtag_read_cpu(&or1k->jtag, OR1K_DMR1_CPU_REG_ADD, 1, &regval);
+	debug_reg_list[OR1K_DEBUG_REG_DMR2] &= ~OR1K_DMR2_WGB;
 	if (step)
-		regval |= OR1K_DMR1_ST | OR1K_DMR1_BT;
+		/* Set the single step trigger in Debug Mode Register 1 (DMR1) */
+		debug_reg_list[OR1K_DEBUG_REG_DMR1] |= OR1K_DMR1_ST | OR1K_DMR1_BT;
 	else
-		regval &= ~(OR1K_DMR1_ST | OR1K_DMR1_BT);
+		/* Clear the single step trigger in Debug Mode Register 1 (DMR1) */
+		debug_reg_list[OR1K_DEBUG_REG_DMR1] &= ~(OR1K_DMR1_ST | OR1K_DMR1_BT);
 
-	or1k_jtag_write_cpu(&or1k->jtag, OR1K_DMR1_CPU_REG_ADD, 1, &regval);
 	/* Set traps to be handled by the debug unit in the Debug Stop 
 	   Register (DSR) */
-	or1k_jtag_read_cpu(&or1k->jtag, OR1K_DSR_CPU_REG_ADD, 1, &regval);
 	/* TODO - check if we have any software breakpoints in place before
 	   setting this value - the kernel, for instance, relies on l.trap
 	   instructions not stalling the processor! */
-	regval |= OR1K_DSR_TE;
-	or1k_jtag_write_cpu(&or1k->jtag, OR1K_DSR_CPU_REG_ADD, 1, &regval);
-	 
+	debug_reg_list[OR1K_DEBUG_REG_DSR] |= OR1K_DSR_TE;
+	/* write debug registers (starting from DMR1 register) */
+	or1k_jtag_write_cpu(&or1k->jtag, OR1K_DMR1_CPU_REG_ADD, OR1K_DEBUG_REG_NUM, debug_reg_list);
+
 	/* the front-end may request us not to handle breakpoints */
 	if (handle_breakpoints)
 	{
