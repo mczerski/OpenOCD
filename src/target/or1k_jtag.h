@@ -20,61 +20,11 @@
 #ifndef OR1K_JTAG
 #define OR1K_JTAG
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
-/* tap instructions - Mohor JTAG TAP */
-#define OR1K_TAP_INST_IDCODE 0x2
-#define OR1K_TAP_INST_DEBUG 0x8
-
-
-/* Mohor SoC debug interface defines */
-
-/* Module selection 4-bits */
-#define OR1K_MOHORDBGIF_MODULE_WB   0x0
-#define OR1K_MOHORDBGIF_MODULE_CPU0 0x1
-#define OR1K_MOHORDBGIF_MODULE_CPU1 0x2 /* Not implemented/used */
-
-/* Wishbone module commands */
-#define OR1K_MOHORDBGIF_WB_MODULE_CMD_GO 0x0
-#define OR1K_MOHORDBGIF_WB_MODULE_CMD_READ 0x1
-#define OR1K_MOHORDBGIF_WB_MODULE_CMD_WRITE 0x2
-
-/* Wishbone bus access command defines */
-#define OR1K_MOHORDBGIF_WB_ACC_WRITE8  0x0
-#define OR1K_MOHORDBGIF_WB_ACC_WRITE16 0x1
-#define OR1K_MOHORDBGIF_WB_ACC_WRITE32 0x2
-#define OR1K_MOHORDBGIF_WB_ACC_READ8   0x4
-#define OR1K_MOHORDBGIF_WB_ACC_READ16  0x5
-#define OR1K_MOHORDBGIF_WB_ACC_READ32  0x6
-
-/* CPU module command defines */
-#define OR1K_MOHORDBGIF_CPU_ACC_WRITE  0x2
-#define OR1K_MOHORDBGIF_CPU_ACC_READ  0x6
-
-/* CPU module commands */
-#define OR1K_MOHORDBGIF_CPU_MODULE_CMD_GO 0x0
-#define OR1K_MOHORDBGIF_CPU_MODULE_CMD_READ 0x1
-#define OR1K_MOHORDBGIF_CPU_MODULE_CMD_WRITE 0x2
-#define OR1K_MOHORDBGIF_CPU_MODULE_CMD_CTRL_READ 0x3
-#define OR1K_MOHORDBGIF_CPU_MODULE_CMD_CTRL_WRITE 0x4
-
-/* CPU module control register bits */
-#define OR1K_MOHORDBGIF_CPU_CR_RESET 1
-#define OR1K_MOHORDBGIF_CPU_CR_STALL 2
-
-#define OR1K_CPU_STALLED 0x1
-
-/* Module select response status codes */
-#define OR1K_MOHORDBGIF_MODULE_SELECT_OK 0x0
-#define OR1K_MOHORDBGIF_MODULE_SELECT_CRC_ERROR 0x1
-#define OR1K_MOHORDBGIF_MODULE_SELECT_MODULE_NOT_EXIST 0x2
-
-/* Command status codes */
-#define OR1K_MOHORDBGIF_CMD_OK 0x0
-#define OR1K_MOHORDBGIF_CMD_CRC_ERROR 0x1
-#define OR1K_MOHORDBGIF_CMD_WB_ERROR 0x4
-#define OR1K_MOHORDBGIF_CMD_OURUN_ERROR 0x8
-
-
+#include "helper/types.h"
 
 struct or1k_jtag
 {

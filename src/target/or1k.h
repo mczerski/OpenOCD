@@ -23,8 +23,7 @@
 
 
 #include <helper/types.h>
-
-struct target;
+#include "target.h"
 
 /* OR1K registers */
 enum or1k_reg_nums {
@@ -88,6 +87,10 @@ struct or1k_core_reg
 	struct or1k_common *or1k_common;
 
 };
+
+/* CPU module control register bits */
+#define OR1K_CPU_CR_RESET 1
+#define OR1K_CPU_CR_STALL 2
 
 /* Make this available to or1k_jtag.h */
 extern struct or1k_core_reg or1k_core_reg_list_arch_info[OR1KNUMCOREREGS];

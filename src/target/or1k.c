@@ -348,7 +348,7 @@ static int or1k_is_cpu_running(struct target *target, int* running)
 		else
 		{
 			/* Specific to Mohor debug interface */
-			*running = !(cpu_cr & OR1K_MOHORDBGIF_CPU_CR_STALL);
+			*running = !(cpu_cr & OR1K_CPU_CR_STALL);
 			return retval;
 		}
 	}
@@ -863,7 +863,7 @@ static int or1k_examine(struct target *target)
 		 * have to do something different here. 
 		 */
  		or1k_jtag_read_cpu_cr(&or1k->jtag, &cpu_cr);
-		if (cpu_cr & OR1K_MOHORDBGIF_CPU_CR_STALL) 
+		if (cpu_cr & OR1K_CPU_CR_STALL) 
 		{
 			LOG_DEBUG("target is halted");
 			target->state = TARGET_HALTED;

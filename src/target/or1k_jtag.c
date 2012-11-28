@@ -22,12 +22,57 @@
 #include "config.h"
 #endif
 
-#include "target.h"
-#include "helper/types.h"
-#include "jtag/jtag.h"
+#include "or1k_tap.h"
 #include "or1k_jtag.h"
 #include "or1k.h"
 
+#include "target.h"
+#include "helper/types.h"
+#include "jtag/jtag.h"
+
+/* Mohor SoC debug interface defines */
+
+/* Module selection 4-bits */
+#define OR1K_MOHORDBGIF_MODULE_WB   0x0
+#define OR1K_MOHORDBGIF_MODULE_CPU0 0x1
+#define OR1K_MOHORDBGIF_MODULE_CPU1 0x2 /* Not implemented/used */
+
+/* Wishbone module commands */
+#define OR1K_MOHORDBGIF_WB_MODULE_CMD_GO 0x0
+#define OR1K_MOHORDBGIF_WB_MODULE_CMD_READ 0x1
+#define OR1K_MOHORDBGIF_WB_MODULE_CMD_WRITE 0x2
+
+/* Wishbone bus access command defines */
+#define OR1K_MOHORDBGIF_WB_ACC_WRITE8  0x0
+#define OR1K_MOHORDBGIF_WB_ACC_WRITE16 0x1
+#define OR1K_MOHORDBGIF_WB_ACC_WRITE32 0x2
+#define OR1K_MOHORDBGIF_WB_ACC_READ8   0x4
+#define OR1K_MOHORDBGIF_WB_ACC_READ16  0x5
+#define OR1K_MOHORDBGIF_WB_ACC_READ32  0x6
+
+/* CPU module command defines */
+#define OR1K_MOHORDBGIF_CPU_ACC_WRITE  0x2
+#define OR1K_MOHORDBGIF_CPU_ACC_READ  0x6
+
+/* CPU module commands */
+#define OR1K_MOHORDBGIF_CPU_MODULE_CMD_GO 0x0
+#define OR1K_MOHORDBGIF_CPU_MODULE_CMD_READ 0x1
+#define OR1K_MOHORDBGIF_CPU_MODULE_CMD_WRITE 0x2
+#define OR1K_MOHORDBGIF_CPU_MODULE_CMD_CTRL_READ 0x3
+#define OR1K_MOHORDBGIF_CPU_MODULE_CMD_CTRL_WRITE 0x4
+
+#define OR1K_CPU_STALLED 0x1
+
+/* Module select response status codes */
+#define OR1K_MOHORDBGIF_MODULE_SELECT_OK 0x0
+#define OR1K_MOHORDBGIF_MODULE_SELECT_CRC_ERROR 0x1
+#define OR1K_MOHORDBGIF_MODULE_SELECT_MODULE_NOT_EXIST 0x2
+
+/* Command status codes */
+#define OR1K_MOHORDBGIF_CMD_OK 0x0
+#define OR1K_MOHORDBGIF_CMD_CRC_ERROR 0x1
+#define OR1K_MOHORDBGIF_CMD_WB_ERROR 0x4
+#define OR1K_MOHORDBGIF_CMD_OURUN_ERROR 0x8
 
 static int or1k_jtag_inited = 0;
 static int or1k_jtag_module_selected = -1;
@@ -35,37 +80,8 @@ static int or1k_jtag_module_selected = -1;
 int or1k_jtag_init(struct or1k_jtag *jtag_info)
 {
 
-	LOG_DEBUG(" Initialising OpenCores JTAG TAP for Mohor Debug Interface"
-		  );
-
-	/* Put TAP into state where it can talk to the debug interface
-	   by shifting in correct value to IR */
-	struct jtag_tap *tap;
-
-	tap = jtag_info->tap;
-	if (tap == NULL)
-		return ERROR_FAIL;
-
-
-	struct scan_field field;
-	uint8_t t[4];
-	uint8_t ret[4];
-      
-	field.num_bits = tap->ir_length;
-	field.out_value = t;
-	/* OpenCores Mohor JTAG TAP-specific */
-	buf_set_u32(t, 0, field.num_bits, OR1K_TAP_INST_DEBUG);
-	field.in_value = ret;
-
-	/* Ensure TAP is reset - maybe not necessary*/
-	jtag_add_tlr();
-      
-	jtag_add_ir_scan(tap, &field, TAP_IDLE);
-	if (jtag_execute_queue() != ERROR_OK)
-	{
-		LOG_ERROR(" setting TAP's IR to DEBUG failed");
-		return ERROR_FAIL;
-	}
+	int err = or1k_tap_init(jtag_info);
+	if (err != ERROR_OK) return err;
 
 	/* TAP should now be configured to communicate with debug interface */
 	or1k_jtag_inited = 1;
@@ -74,6 +90,7 @@ int or1k_jtag_init(struct or1k_jtag *jtag_info)
 	or1k_jtag_module_selected = -1;
 
 	return ERROR_OK;
+
 
 }
 
@@ -1110,12 +1127,12 @@ int or1k_jtag_read_cpu_cr(struct or1k_jtag *jtag_info,
 	*/
 
 	if (in_reset & 0x1)
-		*value |= OR1K_MOHORDBGIF_CPU_CR_RESET;
+		*value |= OR1K_CPU_CR_RESET;
     
   
 	if (in_stall & 0x1)
 	{
-		*value |= OR1K_MOHORDBGIF_CPU_CR_STALL;
+		*value |= OR1K_CPU_CR_STALL;
 	}
 
 	return ERROR_OK;

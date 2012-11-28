@@ -11,6 +11,7 @@ OR1K_JTAG_FILES = or1k_jtag_adv.c
 else
 OR1K_JTAG_FILES = or1k_jtag.c
 endif
+OR1K_JTAG_FILES += or1k_tap.c
 
 BIN2C		= $(top_builddir)/src/helper/bin2char$(EXEEXT_FOR_BUILD)
 
