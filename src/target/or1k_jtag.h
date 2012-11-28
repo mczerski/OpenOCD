@@ -61,9 +61,5 @@ int or1k_jtag_write_memory8(struct or1k_jtag *jtag_info,
 		uint32_t addr, int count, const uint8_t *buffer);
 
 
-int or1k_jtag_read_regs(struct or1k_jtag *jtag_info, uint32_t *regs);
-int or1k_jtag_write_regs(struct or1k_jtag *jtag_info, uint32_t *regs);
-
-
 #endif /* OR1K_JTAG */
 
