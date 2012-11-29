@@ -936,7 +936,7 @@ int or1k_jtag_read_cpu(struct or1k_jtag *jtag_info,
 				4) != ERROR_OK)
 			return ERROR_FAIL;
 
-		if (or1k_jtag_mohor_debug_read_go(jtag_info, 4, 1,(uint8_t *)value) !=
+		if (or1k_jtag_mohor_debug_read_go(jtag_info, 4, 1,(uint8_t *)&value[i]) !=
 				ERROR_OK)
 			return ERROR_FAIL;
 
