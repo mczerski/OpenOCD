@@ -155,5 +155,6 @@ int bit_copy_queued(struct bit_copy_queue *q, uint8_t *dst, unsigned dst_offset,
 		    unsigned src_offset, unsigned bit_count);
 void bit_copy_execute(struct bit_copy_queue *q);
 void bit_copy_discard(struct bit_copy_queue *q);
+void buffer_shr(void *_buf, unsigned buf_len, unsigned count);
 
 #endif /* BINARYBUFFER_H */
