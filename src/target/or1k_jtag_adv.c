@@ -691,7 +691,7 @@ retry_read_full:
 		}
 	}
 
-	buffer_shr(in_buffer, (word_count * word_size_bytes) + CRC_LEN, shift);
+	buffer_shr(in_buffer, (word_count * word_size_bytes) + CRC_LEN + STATUS_BYTES, shift);
 
 	memcpy(data, in_buffer, word_count * word_size_bytes);
 	memcpy(&crc_read, &in_buffer[word_count * word_size_bytes], 4);
