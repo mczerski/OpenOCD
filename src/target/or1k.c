@@ -631,9 +631,9 @@ static int or1k_add_breakpoint(struct target *target,
 				(uint32_t*)breakpoint->orig_instr);
 
 	/* Sub in the OR1K trap instruction */
-	uint32_t or1k_trap_insn = OR1K_TRAP_INSTR;
-	/* Switch endianess */
-	h_u32_to_be((uint8_t*) &or1k_trap_insn, or1k_trap_insn);
+	uint32_t or1k_trap_insn;
+	/* set correct endianess */
+	target_buffer_set_u32(target, (uint8_t*)&or1k_trap_insn, OR1K_TRAP_INSTR);
 	or1k_jtag_write_memory32(&or1k->jtag, 
 				breakpoint->address , 
 				 1,
