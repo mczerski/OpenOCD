@@ -681,10 +681,14 @@ retry_read_full:
 	/* We expect the status bit to be in the first byte */
 	if (shift < 0) {
 		LOG_DEBUG("Burst read timed out\n");
-		if (retry_full_busy++ < MAX_READ_BUSY_RETRY)
+		if (retry_full_busy++ < MAX_READ_BUSY_RETRY) {
+			free(in_buffer);
 			goto retry_read_full;
-		else
+		} else {
+			free(in_buffer);
+			free(field);
 			return ERROR_FAIL;
+		}
 	}
 
 	buffer_shr(in_buffer, (word_count * word_size_bytes) + CRC_LEN, shift);
@@ -703,12 +707,11 @@ retry_read_full:
 
 	if (crc_calc != crc_read) {
 		LOG_DEBUG("CRC ERROR! Computed 0x%x, read CRC 0x%x", crc_calc, crc_read);
+		free(in_buffer);
 		if(retry_full_crc++ < MAX_READ_CRC_RETRY)
 			goto retry_read_full;
-		else {
-			free(in_buffer);
+		else
 			return ERROR_FAIL;
-		}
 	}
 	else
 		LOG_DEBUG("CRC OK!");
