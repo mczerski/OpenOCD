@@ -52,6 +52,9 @@
 #define BURST_READ_READY		1
 #define MAX_BUS_ERRORS			2
 
+#define STATUS_BYTES			1
+#define CRC_LEN				4
+
 static int or1k_jtag_inited = 0;
 static int or1k_jtag_module_selected = -1;
 
@@ -101,6 +104,26 @@ uint32_t adbg_compute_crc(uint32_t crc_in, uint32_t data_in, int length_bits)
 	}
 
 	return crc_out;
+}
+
+int find_status_bit(void *_buf, int len)
+{
+	int i = 0;
+	int count = 0;
+	int ret = -1;
+	uint8_t *buf = _buf;
+
+	while (!(buf[i] & (1 << count++)) && (i < len)) {
+		if (count == 8) {
+			count = 0;
+			i++;
+		}
+	}
+
+	if (i < len)
+		ret = (i * 8) + count;
+
+	return ret;
 }
 
 int or1k_jtag_init(struct or1k_jtag *jtag_info)
@@ -558,7 +581,6 @@ int adbg_wb_burst_read(struct or1k_jtag *jtag_info, int word_size_bytes,
 	struct jtag_tap *tap;
 	struct scan_field * field;
 	int i = 0;
-	int retry = 0;
 	int total_size_bytes;
 	int total_size_32;
 	int spare_bytes;
@@ -567,12 +589,12 @@ int adbg_wb_burst_read(struct or1k_jtag *jtag_info, int word_size_bytes,
 	int retry_full_busy = 0;
 	int bus_error_retries = 0;
 	uint8_t opcode;
-	uint8_t status;
 	uint32_t crc_calc;
 	uint32_t crc_read;
 	uint8_t *in_buffer;
 	uint32_t err_data[2] = {0, 0};
 	uint32_t addr;
+	int shift;
 
 	tap = jtag_info->tap;
 	if (tap == NULL)
@@ -621,47 +643,14 @@ retry_read_full:
 	if (adbg_burst_command(jtag_info, opcode, start_address, word_count) != ERROR_OK)
 		return ERROR_FAIL;
 
-	/* We do not adjust for the DR length here.  BYPASS regs are loaded with 0,
-	 * and the debug unit waits for a '1' status bit before beginning to read data.
-	 */
 
 	/* Calculate transfer params */
-	total_size_bytes = (word_count * word_size_bytes) + 4;
+	total_size_bytes = (word_count * word_size_bytes) + CRC_LEN + STATUS_BYTES;
 	total_size_32 = total_size_bytes / 4;
 	spare_bytes = total_size_bytes % 4;
 
 	/* Allocate correct number of scan fields */
 	field = malloc((total_size_32+1)*sizeof(*field));
-
-	/* Get 1 status bit, then word_size_bytes*8 bits */
-	status = 0;
-
-	field[0].num_bits = 1;
-	field[0].out_value = NULL;
-	field[0].in_value = (uint8_t *)&status;
-
-
-
-	/* Please ensure the jtag driver used doesn't move the tap when the end state is TAP_DRSHIFT.
-	 * As we are doing polling on DR value, we need to stay in DRSHIFT state. I had to hack the 
-	 * usb_blaster driver to get this behavior.
-	 */
-
-	while (!(status & BURST_READ_READY) && retry < MAX_READ_STATUS_WAIT) {
-		jtag_add_dr_scan(tap, 1, &field[0], TAP_DRSHIFT);
-		jtag_execute_queue();
-		retry++;
-	}
-
-	if (retry == MAX_READ_STATUS_WAIT) {
-		LOG_DEBUG("Burst read timed out\n");
-		if (retry_full_busy++ < MAX_READ_BUSY_RETRY)
-			goto retry_read_full;
-		else {
-			free(field);
-			return ERROR_FAIL;
-		}
-	}
 
 	in_buffer = malloc(total_size_bytes);
 
@@ -685,6 +674,20 @@ retry_read_full:
 	jtag_execute_queue();
 
 	free(field);
+
+	/* Look for the start bit in the first STATUS_BYTES * 8 bits */
+	shift = find_status_bit(in_buffer, STATUS_BYTES);
+
+	/* We expect the status bit to be in the first byte */
+	if (shift < 0) {
+		LOG_DEBUG("Burst read timed out\n");
+		if (retry_full_busy++ < MAX_READ_BUSY_RETRY)
+			goto retry_read_full;
+		else
+			return ERROR_FAIL;
+	}
+
+	buffer_shr(in_buffer, (word_count * word_size_bytes) + CRC_LEN, shift);
 
 	memcpy(data, in_buffer, word_count * word_size_bytes);
 	memcpy(&crc_read, &in_buffer[word_count * word_size_bytes], 4);
