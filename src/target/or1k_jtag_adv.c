@@ -686,7 +686,6 @@ retry_read_full:
 			goto retry_read_full;
 		} else {
 			free(in_buffer);
-			free(field);
 			return ERROR_FAIL;
 		}
 	}
