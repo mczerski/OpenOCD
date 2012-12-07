@@ -91,18 +91,6 @@ static int or1k_jtag_read_regs(struct or1k_jtag *jtag_info, uint32_t *regs)
 			or1k_core_reg_list_arch_info[OR1K_REG_R0].spr_num, OR1K_REG_R31+1,
 			regs+OR1K_REG_R0);
 
-	or1k_jtag_read_cpu(jtag_info,
-			or1k_core_reg_list_arch_info[OR1K_REG_PPC].spr_num, 1,
-			regs+OR1K_REG_PPC);
-
-	or1k_jtag_read_cpu(jtag_info,
-			or1k_core_reg_list_arch_info[OR1K_REG_NPC].spr_num, 1,
-			regs+OR1K_REG_NPC);
-
-	or1k_jtag_read_cpu(jtag_info,
-			or1k_core_reg_list_arch_info[OR1K_REG_SR].spr_num, 1,
-			regs+OR1K_REG_SR);
-
 	return ERROR_OK;
 }
 
@@ -111,18 +99,6 @@ static int or1k_jtag_write_regs(struct or1k_jtag *jtag_info, uint32_t *regs)
 	or1k_jtag_write_cpu(jtag_info,
 			or1k_core_reg_list_arch_info[OR1K_REG_R0].spr_num, OR1K_REG_R31+1,
 			&regs[OR1K_REG_R0]);
-
-	or1k_jtag_write_cpu(jtag_info,
-			or1k_core_reg_list_arch_info[OR1K_REG_PPC].spr_num, 1,
-			&regs[OR1K_REG_PPC]);
-
-	or1k_jtag_write_cpu(jtag_info,
-			or1k_core_reg_list_arch_info[OR1K_REG_NPC].spr_num, 1,
-			&regs[OR1K_REG_NPC]);
-
-	or1k_jtag_write_cpu(jtag_info,
-			or1k_core_reg_list_arch_info[OR1K_REG_SR].spr_num, 1,
-			&regs[OR1K_REG_SR]);
 
 	return ERROR_OK;
 }
@@ -136,17 +112,21 @@ int or1k_save_context(struct target *target)
 	
 	for (i = 0; i < OR1KNUMCOREREGS; i++)
 	{
-		if (!regs_read && !or1k->core_cache->reg_list[i].valid)
-		{
-			/* read all registers at once (but only one time in this loop) */
-			retval = or1k_jtag_read_regs(&or1k->jtag, or1k->core_regs);
-			if (retval != ERROR_OK)
-				return retval;
-			
-			/* prevent next reads in this loop */
-			regs_read = 1;
-		}
 		if (!or1k->core_cache->reg_list[i].valid) {
+			if (i == OR1K_REG_PPC || i == OR1K_REG_NPC || i == OR1K_REG_SR) {
+				or1k_jtag_read_cpu(&or1k->jtag,
+						or1k_core_reg_list_arch_info[i].spr_num, 1,
+						&or1k->core_regs[i]);
+			}
+			else if (!regs_read) {
+				/* read gpr registers at once (but only one time in this loop) */
+				retval = or1k_jtag_read_regs(&or1k->jtag, or1k->core_regs);
+				if (retval != ERROR_OK)
+					return retval;
+
+				/* prevent next reads in this loop */
+				regs_read = 1;
+			}
 			/* We've just updated the core_reg[i], now update
 			   the core cache */
 			or1k_read_core_reg(target, i);
@@ -158,7 +138,7 @@ int or1k_save_context(struct target *target)
 
 int or1k_restore_context(struct target *target)
 {
-	int i;
+	int retval, i, reg_write = 0;
 
 	LOG_DEBUG(" - ");
 
@@ -170,11 +150,24 @@ int or1k_restore_context(struct target *target)
 		if (or1k->core_cache->reg_list[i].dirty)
 		{
 			or1k_write_core_reg(target, i);
+
+			if (i == OR1K_REG_PPC || i == OR1K_REG_NPC || i == OR1K_REG_SR) {
+				or1k_jtag_write_cpu(&or1k->jtag,
+						or1k_core_reg_list_arch_info[i].spr_num, 1,
+						&or1k->core_regs[i]);
+			}
+			else {
+				reg_write = 1;
+			}
 		}
 	}
 
-	/* write core regs */
-	or1k_jtag_write_regs(&or1k->jtag, or1k->core_regs);
+	if (reg_write) {
+		/* read gpr registers at once (but only one time in this loop) */
+		retval = or1k_jtag_write_regs(&or1k->jtag, or1k->core_regs);
+		if (retval != ERROR_OK)
+			return retval;
+	}
 
 	return ERROR_OK;
 }
@@ -516,9 +509,7 @@ static int or1k_resume_or_step(struct target *target, int current,
 			    32, address);
 	}
 
-	if (!step) {
-		or1k_restore_context(target);
-	}
+	or1k_restore_context(target);
 
 	uint32_t debug_reg_list[OR1K_DEBUG_REG_NUM];
 	/* read debug registers (starting from DMR1 register) */
