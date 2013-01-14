@@ -340,7 +340,7 @@ int or1k_jtag_mohor_debug_set_command(struct or1k_jtag *jtag_info,
 			  );
 		return ERROR_FAIL;
 	}
-	else if ((in_status&0xff) == OR1K_MOHORDBGIF_CMD_OK)
+	else if ((in_status&0x0f) == OR1K_MOHORDBGIF_CMD_OK)
 	{
 		/*LOG_DEBUG(" debug IF command write OK");*/
 	}
@@ -883,7 +883,7 @@ int or1k_jtag_mohor_debug_write_go(struct or1k_jtag *jtag_info,
 			  );
 		return ERROR_FAIL;
 	}
-	else if ((in_status&0xff) == OR1K_MOHORDBGIF_CMD_OK)
+	else if ((in_status&0x0f) == OR1K_MOHORDBGIF_CMD_OK)
 	{
 		/*LOG_DEBUG(" debug IF go command OK");*/
 	}
@@ -1239,7 +1239,7 @@ int or1k_jtag_write_cpu_cr(struct or1k_jtag *jtag_info,
 		LOG_ERROR(" debug IF CPU CR write status: CRC error");
 		return ERROR_FAIL;
 	}
-	else if ((in_status&0xff) == OR1K_MOHORDBGIF_CMD_OK)
+	else if ((in_status&0x0f) == OR1K_MOHORDBGIF_CMD_OK)
 	{
 		LOG_DEBUG(" debug IF CPU CR write OK");
 	}
